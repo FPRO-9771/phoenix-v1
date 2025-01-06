@@ -13,6 +13,7 @@ from commands2.button import JoystickButton
 from subsystems.rotate_to_april_tag import RotateToAprilTag
 from handlers.limelight_handler import LimelightHandler
 
+
 class RobotContainer:
 
     def __init__(self):
@@ -73,12 +74,12 @@ class RobotContainer:
             print(f"Button: {button_name}")
 
         a_button_command = SequentialCommandGroup(
-            InstantCommand(lambda: print_action("A")),  # Print that the A button was pressed
+            InstantCommand(lambda: print_action("A")),
             InstantCommand(lambda: self.drivetrain.apply_request(lambda: self.brake))  # Apply the brake
         )
 
         b_button_command = SequentialCommandGroup(
-            InstantCommand(lambda: print_action("B")),  # Print that the A button was pressed
+            InstantCommand(lambda: print_action("B")),
             InstantCommand(
                 lambda: self.drivetrain.apply_request(
                     lambda: self.point.with_module_direction(
@@ -89,15 +90,19 @@ class RobotContainer:
         )
 
         lb_button_command = SequentialCommandGroup(
-            InstantCommand(lambda: print_action("LB")),  # Print that the A button was pressed
+            InstantCommand(lambda: print_action("LB")),
             InstantCommand(lambda: self.drivetrain.seed_field_centric())
         )
 
         # Bind the command to run continuously
-        a_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(a_button_command)))
+        a_button.whileTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(a_button_command)))
         b_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(b_button_command)))
         left_bumper_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(lb_button_command)))
-        x_button.whileTrue(RotateToAprilTag(self.drive, self.limelight_handler, self.max_angular_rate))
+        # x_button.whileTrue(RotateToAprilTag(self.drive, self.limelight_handler, self.max_angular_rate))
+        x_button.whileTrue(InstantCommand(
+            lambda: self.drivetrain.apply_request(
+                lambda: self.drive.with_rotational_rate(.5 * self.max_angular_rate)
+            )))
 
     def get_autonomous_command(self) -> Command:
         """Return the autonomous command."""
