@@ -35,7 +35,7 @@ steer_initial_configs = TalonFXConfiguration().with_current_limits(
     .with_stator_current_limit(60)
     .with_stator_current_limit_enable(True)
 )
-cancoder_initial_configs = CANcoderConfiguration()
+encoder_initial_configs = CANcoderConfiguration()
 
 # Pigeon2 configuration (if applicable, None otherwise)
 pigeon_configs = Pigeon2Configuration()
@@ -85,56 +85,56 @@ constant_creator = (
     .with_coupling_gear_ratio(k_couple_ratio)
     .with_drive_motor_initial_configs(drive_initial_configs)
     .with_steer_motor_initial_configs(steer_initial_configs)
-    .with_cancoder_initial_configs(cancoder_initial_configs)
+    .with_encoder_initial_configs(encoder_initial_configs)
 )
 
 # Swerve module constants
 front_left = constant_creator.create_module_constants(
     steer_motor_id=5,
     drive_motor_id=6,
-    cancoder_id=11,
-    cancoder_offset=-0.340576171875,
+    encoder_id=11,
+    encoder_offset=-0.340576171875,
     location_x=inchesToMeters(10.41),
     location_y=inchesToMeters(10.41),
     drive_motor_inverted=k_invert_left_side,
     steer_motor_inverted=True,
-    cancoder_inverted=False,
+    encoder_inverted=False,
 )
 
 front_right = constant_creator.create_module_constants(
     steer_motor_id=3,
     drive_motor_id=4,
-    cancoder_id=10,
-    cancoder_offset=-0.14794921875,
+    encoder_id=10,
+    encoder_offset=-0.14794921875,
     location_x=inchesToMeters(10.41),
     location_y=inchesToMeters(-10.41),
     drive_motor_inverted=k_invert_right_side,
     steer_motor_inverted=True,
-    cancoder_inverted=False,
+    encoder_inverted=False,
 )
 
 back_left = constant_creator.create_module_constants(
     steer_motor_id=7,
     drive_motor_id=8,
-    cancoder_id=12,
-    cancoder_offset=0.198974609375,
+    encoder_id=12,
+    encoder_offset=0.198974609375,
     location_x=inchesToMeters(-10.41),
     location_y=inchesToMeters(10.41),
     drive_motor_inverted=k_invert_left_side,
     steer_motor_inverted=True,
-    cancoder_inverted=False,
+    encoder_inverted=False,
 )
 
 back_right = constant_creator.create_module_constants(
     steer_motor_id=1,
     drive_motor_id=2,
-    cancoder_id=9,
-    cancoder_offset=0.3583984375,
+    encoder_id=9,
+    encoder_offset=0.3583984375,
     location_x=inchesToMeters(-10.41),
     location_y=inchesToMeters(-10.41),
     drive_motor_inverted=k_invert_right_side,
     steer_motor_inverted=True,
-    cancoder_inverted=False,
+    encoder_inverted=False,
 )
 
 # Drivetrain subsystem

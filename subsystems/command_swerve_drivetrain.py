@@ -12,7 +12,12 @@ class CommandSwerveDrivetrain(SwerveDrivetrain, SubsystemBase):
 
     def __init__(self, drivetrain_constants, *modules):
         # Pass only supported arguments to SwerveDrivetrain
-        SwerveDrivetrain.__init__(self, drivetrain_constants, list(modules[:4]))  # Limit to 4 modules
+        SwerveDrivetrain.__init__(self,
+                                  'TalonFX_Integrated',
+                                  'TalonFX_Integrated',
+                                  'Cancoder_Integrated',
+                                  drivetrain_constants,
+                                  list(modules[:4]))  # Limit to 4 modules
         SubsystemBase.__init__(self)  # Initialize SubsystemBase
 
         self.m_sim_notifier = None

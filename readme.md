@@ -1,22 +1,52 @@
+## Setup for a clean computer (Mac)
+
+### Install Pyenv
+
+Check if it's already installed
+```bash
+  pyenv --version
+```
+If not:
+```bash
+  brew install pyenv
+```
+Confirm by checking pyenv --version. If that doesn't work you need to update the path.
+
+### Navigate to your project directory
+
+### Install and use Python 3.13
+```bash
+  pyenv install 3.13.0
+```
+```bash
+  pyenv local 3.13.0
+```
+
+### Set up a virtual environment
+Create it (note that you can change the ".venv" name)
+```bash
+  python3 -m venv .venv
+```
+Then activate it
+```bash
+  source .venv/bin/activate
+```
+
+### Verify Python version in your virtual environment
+
+```bash
+  python3 --version
+```
+Should return 3.13.0
+
+### install required packages
+
+```bash
+    pip install wpilib robotpy phoenix6 robotpy\[commands2\] pynetworktables
+```
+
+---
 ## Setup for a clean computer (Windows)
-
-### Install Python v3.10 (see below)
-pyenv is the way to go
-
-### set up a virtual environment (NEED INSTRUCTIONS)
-
-### verify that you're running Python v3.10 in your virtual env:
-
-```bash
-  python --version
-```
-
-### install packages
-
-```bash
-    pip install wpilib==2025.0.0b2 robotpy==2025.0.0b2 phoenix6==25.0.0b3 robotpy[commands2] pynetworktables
-```
-Note: needs to be pip install robotpy\\[commands2\\] on Mc
 
 ## Install pyenv-win in PowerShell.
 
