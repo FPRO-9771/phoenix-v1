@@ -1,0 +1,6 @@
+phoenix6
+pynetworktables
+robotpy_commands_v2
+robotpy_wpimath
+wpilib
+limelightlib-python
