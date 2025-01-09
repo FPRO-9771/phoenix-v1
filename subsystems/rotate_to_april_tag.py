@@ -2,6 +2,7 @@ from commands2 import Command
 from generated import tuner_constants
 
 class RotateToAprilTag(Command):
+# class RotateToAprilTag():
     def __init__(self, drive, limelight_handler, max_angular_rate):
         print("rotate_to_april_tag init")
         super().__init__()
@@ -21,32 +22,28 @@ class RotateToAprilTag(Command):
 
     def execute(self):
         """Called repeatedly when the command is scheduled."""
-        print("")
-        print("")
-        print("rotate_to_april_tag execute")
         result = self.limelight_handler.read_results()
         if result and result.validity:
-            print("")
-            print("")
             print("----- Target: Acquired")
-            tx = result.fiducialResults[0].target_x_degrees  # Replace with your Limelight's offset API
-            print("")
-            print("")
-            print("----- Target: tx:",tx)
-            if abs(tx) > 1.0:  # Adjust the threshold as needed
+            tx = result.fiducialResults[0].target_x_degrees
+            print("----- Target: tx:", tx)
+            
+            if abs(tx) > 1.0:
                 scaled_rotation = tx / 45
-                print("")
-                print("")
+                rotation_rate = -scaled_rotation * self.max_angular_rate
                 print("----- Scaled Rotation:", scaled_rotation)
-                print("----- Rotation:", -scaled_rotation * self.max_angular_rate)
-                self.drivetrain.apply_request(lambda: self.drive
-                                              .with_rotational_rate(-scaled_rotation * self.max_angular_rate)
-                                              )
+                print("----- Rotation Rate:", rotation_rate)
+                
+                # Debug rotation request
+                rotation_request = self.drive.with_rotational_rate(rotation_rate)
+                print("----- Applying rotation request:", rotation_request)
+                
+                # Apply request directly to drivetrain
+                self.drivetrain.apply_request(rotation_request)
+                
             else:
                 self.target_acquired = True
         else:
-            print("")
-            print("")
             print('----- Target: None Found')
 
     def isFinished(self):

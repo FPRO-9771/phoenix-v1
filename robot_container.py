@@ -127,7 +127,7 @@ class RobotContainer:
 
 
 
-        # x_button.whileTrue(RotateToAprilTag(self.drive, self.limelight_handler, self.max_angular_rate))
+        x_button.whileTrue(RotateToAprilTag(self.drive, self.limelight_handler, self.max_angular_rate))
         # x_button.whileTrue(InstantCommand(
         #     lambda: self.drivetrain.apply_request(
         #         lambda: self.drive.with_rotational_rate(.5 * self.max_angular_rate)
