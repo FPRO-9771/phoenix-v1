@@ -1,4 +1,6 @@
 from phoenix6.swerve import SwerveDrivetrain, SwerveDrivetrainConstants, SwerveModuleConstants
+from phoenix6.hardware import  TalonFX, CANcoder
+
 from commands2 import SubsystemBase, InstantCommand
 from phoenix6 import utils
 from wpimath.geometry import Rotation2d
@@ -13,9 +15,9 @@ class CommandSwerveDrivetrain(SwerveDrivetrain, SubsystemBase):
     def __init__(self, drivetrain_constants, *modules):
         # Pass only supported arguments to SwerveDrivetrain
         SwerveDrivetrain.__init__(self,
-                                  'TalonFX_Integrated',
-                                  'TalonFX_Integrated',
-                                  'Cancoder_Integrated',
+                                  TalonFX,
+                                  TalonFX,
+                                  CANcoder,
                                   drivetrain_constants,
                                   list(modules[:4]))  # Limit to 4 modules
         SubsystemBase.__init__(self)  # Initialize SubsystemBase

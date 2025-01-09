@@ -44,6 +44,10 @@ Should return 3.13.0
 ```bash
     pip install wpilib robotpy phoenix6 robotpy\[commands2\] pynetworktables
 ```
+or 
+```bash
+pip install -r requirements.txt
+```
 
 ---
 ## Setup for a clean computer (Windows)
