@@ -1,5 +1,5 @@
 import math
-from commands2 import InstantCommand, PrintCommand, Command, CommandScheduler, SequentialCommandGroup
+from commands2 import InstantCommand, PrintCommand, Command, CommandScheduler, SequentialCommandGroup, RunCommand
 from commands2.button import Trigger
 from wpilib import XboxController
 from wpilib.event import EventLoop
@@ -12,7 +12,15 @@ from generated import tuner_constants
 from commands2.button import JoystickButton
 from subsystems.rotate_to_april_tag import RotateToAprilTag
 from handlers.limelight_handler import LimelightHandler
-
+from commands2 import (
+    CommandScheduler, 
+    InstantCommand, 
+    SequentialCommandGroup,
+    WaitCommand,
+    RepeatCommand,
+    PrintCommand
+)
+import time
 
 class RobotContainer:
 
@@ -20,6 +28,7 @@ class RobotContainer:
         """Initialize the RobotContainer and configure bindings."""
         self.max_speed = tuner_constants.k_speed_at_12_volts_mps  # Top speed
         self.max_angular_rate = 1.5 * math.pi  # Max angular velocity (3/4 rotation per second)
+        self.last_rotation_time = 0
 
         # Joystick and drivetrain initialization
         self.joystick = XboxController(0)
@@ -51,6 +60,22 @@ class RobotContainer:
         # Register telemetry
         self.drivetrain.register_telemetry(self.logger.telemeterize)
 
+    def apply_drivetrain_request(self, request):
+        """Helper function to apply requests to drivetrain.
+        Args:
+            request: The request to apply to the drivetrain
+        """
+        self.drivetrain.apply_request(request)
+
+    def apply_rotation(self):
+        """Apply rotation to the drivetrain with rate limiting."""
+        current_time = time.time()
+        if current_time - self.last_rotation_time >= 0.5:  # 500ms delay
+            print("Rotation command triggered")
+            rotation_request = self.drive.with_rotational_rate(.5 * self.max_angular_rate)
+            self.drivetrain.apply_request(rotation_request)
+            self.last_rotation_time = current_time
+
     def configure_bindings(self):
         """Configure button-to-command mappings."""
         # Default drivetrain command
@@ -58,7 +83,7 @@ class RobotContainer:
             self.drivetrain.apply_request(lambda: self.drive
                                           .with_velocity_x(-self.joystick.getLeftY() * self.max_speed)
                                           .with_velocity_y(-self.joystick.getLeftX() * self.max_speed)
-                                          .with_rotational_rate(-self.joystick.getRightX() * self.max_angular_rate)
+                                          # .with_rotational_rate(-self.joystick.getRightX() * self.max_angular_rate)
                                           )
         )
 
@@ -94,16 +119,47 @@ class RobotContainer:
             InstantCommand(lambda: self.drivetrain.seed_field_centric())
         )
 
-        # Bind the command to run continuously
-        a_button.whileTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(a_button_command)))
+
+        # Original button bindings remain unchanged
+        # a_button.whileTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(a_button_command)))
         b_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(b_button_command)))
         left_bumper_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(lb_button_command)))
+
+
+
         # x_button.whileTrue(RotateToAprilTag(self.drive, self.limelight_handler, self.max_angular_rate))
-        x_button.whileTrue(InstantCommand(
-            lambda: self.drivetrain.apply_request(
-                lambda: self.drive.with_rotational_rate(.5 * self.max_angular_rate)
-            )))
+        # x_button.whileTrue(InstantCommand(
+        #     lambda: self.drivetrain.apply_request(
+        #         lambda: self.drive.with_rotational_rate(.5 * self.max_angular_rate)
+        #     )))
+        # x_button.whileTrue(InstantCommand(self.apply_rotation))
+            # Create rotation command
+        # rotation_command = InstantCommand(
+        #     self.apply_rotation,
+        #     name="Rotation Command"  # Named for debugging
+        # )
+        rotation_command = RunCommand(
+            self.apply_rotation,
+            # name="Rotation Command"
+        )
+        # a_button.whileTrue(InstantCommand(self.apply_rotation))
+        a_button.onTrue(rotation_command)
+
+
+
+    def rotate_drivetrain(self):
+        """Helper method to rotate the drivetrain."""
+        rotation_request = self.drive.with_rotational_rate(.5 * self.max_angular_rate)
+        self.drivetrain.apply_request(rotation_request)
+
 
     def get_autonomous_command(self) -> Command:
+        time.sleep(10)
         """Return the autonomous command."""
-        return PrintCommand("No autonomous command configured")
+        return RepeatCommand(
+            SequentialCommandGroup(
+                WaitCommand(10),  # Wait 10 seconds
+                InstantCommand(self.rotate_drivetrain),
+                WaitCommand(1)  # Rotate for 1 second
+            )
+        )
