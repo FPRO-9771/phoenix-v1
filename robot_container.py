@@ -76,24 +76,37 @@ class RobotContainer:
             self.drivetrain.apply_request(rotation_request)
             self.last_rotation_time = current_time
 
+    def set_speed_ratio(self, ratio):
+        """Sets the speed ratio based on button press/release."""
+        self.speed_ratio = ratio
+
     def configure_bindings(self):
         """Configure button-to-command mappings."""
+        a_button = JoystickButton(self.joystick, self.joystick.Button.kA)
+        b_button = JoystickButton(self.joystick, self.joystick.Button.kB)
+
+
+        self.speed_ratio = 1  # Default speed ratio (no reduction)
+
+        # Set up the button press event (onTrue)
+        b_button.onTrue(InstantCommand(lambda: self.set_speed_ratio(0.5)))  # Set to 50% speed when pressed
+
+        # Set up the button release event (onFalse)
+        b_button.onFalse(InstantCommand(lambda: self.set_speed_ratio(1)))  # Reset to full speed when released
+
         # Default drivetrain command
         self.drivetrain.setDefaultCommand(
             self.drivetrain.apply_request(lambda: self.drive
-                                          .with_velocity_x(-self.joystick.getLeftY() * self.max_speed)
-                                          .with_velocity_y(-self.joystick.getLeftX() * self.max_speed)
+                                          .with_velocity_x(-self.joystick.getLeftY() * self.max_speed * self.speed_ratio)
+                                          .with_velocity_y(-self.joystick.getLeftX() * self.max_speed * self.speed_ratio)
                                           # .with_rotational_rate(-self.joystick.getRightX() * self.max_angular_rate)
                                           )
         )
 
+
         # Ensure you have a default EventLoop from the CommandScheduler
         default_loop = CommandScheduler.getInstance().getDefaultButtonLoop()
 
-        a_button = JoystickButton(self.joystick, self.joystick.Button.kA)
-        b_button = JoystickButton(self.joystick, self.joystick.Button.kB)
-        x_button = JoystickButton(self.joystick, self.joystick.Button.kX)
-        left_bumper_button = JoystickButton(self.joystick, self.joystick.Button.kLeftBumper)
 
         def print_action(button_name):
             print(f"Button: {button_name}")
@@ -119,10 +132,11 @@ class RobotContainer:
             InstantCommand(lambda: self.drivetrain.seed_field_centric())
         )
 
-
+        x_button = JoystickButton(self.joystick, self.joystick.Button.kX)
+        left_bumper_button = JoystickButton(self.joystick, self.joystick.Button.kLeftBumper)
         # Original button bindings remain unchanged
         # a_button.whileTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(a_button_command)))
-        b_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(b_button_command)))
+        # b_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(b_button_command)))
         left_bumper_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(lb_button_command)))
 
 
