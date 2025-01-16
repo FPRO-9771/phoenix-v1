@@ -89,7 +89,7 @@ class RobotContainer:
         self.speed_ratio = 1  # Default speed ratio (no reduction)
 
         # Set up the button press event (onTrue)
-        b_button.onTrue(InstantCommand(lambda: self.set_speed_ratio(0.5)))  # Set to 50% speed when pressed
+        b_button.onTrue(InstantCommand(lambda: self.set_speed_ratio(0.25)))  # Set to 50% speed when pressed
 
         # Set up the button release event (onFalse)
         b_button.onFalse(InstantCommand(lambda: self.set_speed_ratio(1)))  # Reset to full speed when released
