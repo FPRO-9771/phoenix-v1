@@ -6,7 +6,10 @@ from wpilib.event import EventLoop
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from phoenix6 import utils
 from phoenix6.swerve import requests, swerve_module
+from subsystems.arm import Arm
 from subsystems.command_swerve_drivetrain import CommandSwerveDrivetrain
+from subsystems.elevator import Elevator
+from subsystems.shooter import Shooter
 from telemetry import Telemetry
 from generated import tuner_constants
 from commands2.button import JoystickButton
@@ -59,6 +62,27 @@ class RobotContainer:
 
         # Register telemetry
         self.drivetrain.register_telemetry(self.logger.telemeterize)
+
+        ############################################
+        ############################################
+        ############################################
+        #START NEW CODE FROM ALEX
+        ############################################
+        ############################################
+        ############################################
+
+        self.elevator = Elevator(15)  # Use appropriate CAN ID
+        self.arm = Arm(16)  # Use appropriate CAN ID
+        self.shooter = Shooter(17)  # Use appropriate CAN ID
+
+
+         ############################################
+        ############################################
+        ############################################
+        # END NEW CODE FROM ALEX
+        ############################################
+        ############################################
+        ############################################
 
     def apply_drivetrain_request(self, request):
         """Helper function to apply requests to drivetrain.
@@ -142,16 +166,6 @@ class RobotContainer:
 
 
         x_button.whileTrue(RotateToAprilTag(self.drive, self.limelight_handler, self.max_angular_rate))
-        # x_button.whileTrue(InstantCommand(
-        #     lambda: self.drivetrain.apply_request(
-        #         lambda: self.drive.with_rotational_rate(.5 * self.max_angular_rate)
-        #     )))
-        # x_button.whileTrue(InstantCommand(self.apply_rotation))
-            # Create rotation command
-        # rotation_command = InstantCommand(
-        #     self.apply_rotation,
-        #     name="Rotation Command"  # Named for debugging
-        # )
         rotation_command = RunCommand(
             self.apply_rotation,
             # name="Rotation Command"
@@ -160,6 +174,61 @@ class RobotContainer:
         a_button.onTrue(rotation_command)
 
 
+
+        ############################################
+        ############################################
+        ############################################
+        # START NEW CODE FROM ALEX
+        ############################################
+        ############################################
+        ############################################
+
+        ## ELEVATOR CODE
+        # Create buttons for elevator control
+        x_button_elevator = JoystickButton(self.joystick, self.joystick.Button.kX)
+        y_button_elevator = JoystickButton(self.joystick, self.joystick.Button.kY)
+        a_button_elevator = JoystickButton(self.joystick, self.joystick.Button.kA)
+        b_button_elevator = JoystickButton(self.joystick, self.joystick.Button.kB)
+
+        # Map buttons to elevator heights
+        x_button_elevator.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[self.joystick.Button.kX]))
+        y_button_elevator.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[self.joystick.Button.kY]))
+        a_button_elevator.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[self.joystick.Button.kA]))
+        b_button_elevator.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[self.joystick.Button.kB]))
+
+        ## ARM CODE
+        # Create buttons for arm control
+        left_bumper = JoystickButton(self.joystick, self.joystick.Button.kLeftBumper)
+        right_bumper = JoystickButton(self.joystick, self.joystick.Button.kRightBumper)
+        back_button = JoystickButton(self.joystick, self.joystick.Button.kBack)
+        start_button = JoystickButton(self.joystick, self.joystick.Button.kStart)
+
+        # Map buttons to arm angles
+        left_bumper.onTrue(self.arm.go_to_angle(self.arm.preset_angles[self.joystick.Button.kLeftBumper]))
+        right_bumper.onTrue(self.arm.go_to_angle(self.arm.preset_angles[self.joystick.Button.kRightBumper]))
+        back_button.onTrue(self.arm.go_to_angle(self.arm.preset_angles[self.joystick.Button.kBack]))
+        start_button.onTrue(self.arm.go_to_angle(self.arm.preset_angles[self.joystick.Button.kStart]))
+
+
+        ## SHOOTER CODE
+        # Optional: Add a default command to hold position
+        self.arm.setDefaultCommand(self.arm.hold_position())
+
+        # Optionally set default speed if 75% isn't appropriate
+        self.shooter.set_speed_percentage(0.75)  # 75% speed
+
+        # In RobotContainer.configure_bindings(), add:
+        # Create button for shooter control - using right trigger as an example
+        right_trigger = Trigger(lambda: self.joystick.getRightTriggerAxis() > 0.5)
+        right_trigger.whileTrue(self.shooter.shoot())
+
+        ############################################
+        ############################################
+        ############################################
+        # END NEW CODE FROM ALEX
+        ############################################
+        ############################################
+        ############################################
 
     def rotate_drivetrain(self):
         """Helper method to rotate the drivetrain."""
