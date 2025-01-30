@@ -14,12 +14,7 @@ class Arm(SubsystemBase):
     """
     
     def __init__(self, motor_id: int, gear_ratio: float = 50.0):
-        """Initialize the arm subsystem.
-        
-        Args:
-            motor_id: CAN ID of the TalonFX motor
-            gear_ratio: Gear ratio between motor and arm output
-        """
+        """Initialize the arm subsystem."""
         super().__init__()
         
         # Initialize motor
@@ -57,17 +52,13 @@ class Arm(SubsystemBase):
             XboxController.Button.kStart: 135.0        # High position
         }
         
-        # Current target angle
+        # Current target angle and state tracking
         self.target_angle = 0.0
+        self.is_holding_position = False
+        self.last_target_angle = None
         
     def set_preset_angle(self, button: XboxController.Button, angle: float):
-        """Set a preset angle for a specific button.
-        
-        Args:
-            button: XboxController button enum
-            angle: Target angle in degrees (0-180)
-        """
-        # Clamp angle to valid range
+        """Set a preset angle for a specific button."""
         clamped_angle = min(max(angle, self.MIN_ANGLE), self.MAX_ANGLE)
         self.preset_angles[button] = clamped_angle
         
@@ -82,32 +73,31 @@ class Arm(SubsystemBase):
         return (angle / 360.0) * self.gear_ratio
         
     def go_to_angle(self, angle: float) -> Command:
-        """Create a command to move the arm to a specific angle.
-        
-        Args:
-            angle: Target angle in degrees (0-180)
-        """
+        """Create a command to move the arm to a specific angle."""
         class ArmMoveCommand(Command):
             def __init__(self, arm, target_angle):
                 super().__init__()
                 self.arm = arm
                 self.target_angle = min(max(target_angle, arm.MIN_ANGLE), arm.MAX_ANGLE)
                 self.addRequirements(arm)
+                self.reported_completion = False
                 
             def initialize(self):
-                print(f"Moving arm to angle: {self.target_angle} degrees")
-                target_rotations = self.arm.angle_to_motor_rotations(self.target_angle)
-                self.arm.motor.set_position(target_rotations)
+                if not self.arm.is_holding_position:  # Only print when not holding
+                    print(f"Moving arm to angle: {self.target_angle} degrees")
+                self.arm.motor.set_position(self.arm.angle_to_motor_rotations(self.target_angle))
                 
             def isFinished(self):
                 current_angle = self.arm.get_current_angle()
-                return abs(current_angle - self.target_angle) < 2.0  # 2 degree tolerance
+                at_target = abs(current_angle - self.target_angle) < 2.0  # 2 degree tolerance
+                if at_target and not self.reported_completion and not self.arm.is_holding_position:
+                    print(f"Arm reached target angle: {self.target_angle}")
+                    self.reported_completion = True
+                return at_target
                 
             def end(self, interrupted):
-                if interrupted:
+                if interrupted and not self.arm.is_holding_position:
                     print("Arm movement interrupted")
-                else:
-                    print(f"Arm reached target angle: {self.target_angle}")
                     
         return ArmMoveCommand(self, angle)
     
@@ -115,13 +105,36 @@ class Arm(SubsystemBase):
         """Stop the arm motor."""
         self.motor.set_position(self.motor.get_position().value)
         
-    def hold_position(self):
+    def hold_position(self) -> Command:
         """Command to hold the current position."""
-        return self.go_to_angle(self.get_current_angle())
+        class HoldPositionCommand(Command):
+            def __init__(self, arm):
+                super().__init__()
+                self.arm = arm
+                self.addRequirements(arm)
+                
+            def initialize(self):
+                self.arm.is_holding_position = True
+                current_angle = self.arm.get_current_angle()
+                if self.arm.last_target_angle is None:
+                    self.arm.last_target_angle = current_angle
+                    self.arm.motor.set_position(self.arm.angle_to_motor_rotations(current_angle))
+                
+            def execute(self):
+                # Only update position if there's significant drift
+                current_angle = self.arm.get_current_angle()
+                if abs(current_angle - self.arm.last_target_angle) > 5.0:  # 5 degree threshold
+                    self.arm.last_target_angle = current_angle
+                    self.arm.motor.set_position(self.arm.angle_to_motor_rotations(current_angle))
+                
+            def end(self, interrupted):
+                self.arm.is_holding_position = False
+                self.arm.last_target_angle = None
+                
+        return HoldPositionCommand(self)
         
     def periodic(self):
         """Periodic update function."""
-        # Add telemetry or additional periodic checks here
         current_angle = self.get_current_angle()
         if current_angle < self.MIN_ANGLE or current_angle > self.MAX_ANGLE:
             print(f"WARNING: Arm angle {current_angle} outside safe range!")

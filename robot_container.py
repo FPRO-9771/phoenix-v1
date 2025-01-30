@@ -33,11 +33,16 @@ class RobotContainer:
         self.max_angular_rate = 1.5 * math.pi  # Max angular velocity (3/4 rotation per second)
         self.last_rotation_time = 0
 
-        # Joystick and drivetrain initialization
-        self.joystick = XboxController(0)
-        self.drivetrain = tuner_constants.DriveTrain
+        # Initialize two controllers
+        self.controller_driver = XboxController(0)    # Driver controller for driving/vision
+        self.controller_operator = XboxController(1)  # Operator controller for mechanisms
 
+        # Initialize subsystems
+        self.drivetrain = tuner_constants.DriveTrain
         self.limelight_handler = LimelightHandler(debug=True)
+        self.elevator = Elevator(15)
+        self.arm = Arm(16)
+        self.shooter = Shooter(17)
 
         # Swerve requests
         self.drive = requests.FieldCentric() \
@@ -50,11 +55,10 @@ class RobotContainer:
 
         # Telemetry
         self.logger = Telemetry(self.max_speed)
-
         self.event_loop = EventLoop()
 
-        # Configure button bindings
-        self.configure_bindings()
+        # Speed ratio for drivetrain
+        self.speed_ratio = 1
 
         # If in simulation, seed_field_centric position
         if utils.is_simulation():
@@ -63,186 +67,90 @@ class RobotContainer:
         # Register telemetry
         self.drivetrain.register_telemetry(self.logger.telemeterize)
 
-        ############################################
-        ############################################
-        ############################################
-        #START NEW CODE FROM ALEX
-        ############################################
-        ############################################
-        ############################################
+        self.configure_bindings()
 
-        self.elevator = Elevator(15)  # Use appropriate CAN ID
-        self.arm = Arm(16)  # Use appropriate CAN ID
-        self.shooter = Shooter(17)  # Use appropriate CAN ID
+    def configure_bindings(self):
+        """Configure button-to-command mappings."""
+        self.configure_driver_controls()
+        self.configure_operator_controls()
 
+    def configure_driver_controls(self):
+        """Configure driver controller bindings (driving and vision)."""
+        # Drivetrain default command
+        self.drivetrain.setDefaultCommand(
+            self.drivetrain.apply_request(lambda: self.drive
+                .with_velocity_x(-self.controller_driver.getLeftY() * self.max_speed * self.speed_ratio)
+                .with_velocity_y(-self.controller_driver.getLeftX() * self.max_speed * self.speed_ratio)
+            )
+        )
 
-         ############################################
-        ############################################
-        ############################################
-        # END NEW CODE FROM ALEX
-        ############################################
-        ############################################
-        ############################################
+        # Driver buttons
+        x_button_driver = JoystickButton(self.controller_driver, XboxController.Button.kX)
+        left_bumper_driver = JoystickButton(self.controller_driver, XboxController.Button.kLeftBumper)
+        b_button_driver = JoystickButton(self.controller_driver, XboxController.Button.kB)
+        a_button_driver = JoystickButton(self.controller_driver, XboxController.Button.kA)
 
-    def apply_drivetrain_request(self, request):
-        """Helper function to apply requests to drivetrain.
-        Args:
-            request: The request to apply to the drivetrain
-        """
-        self.drivetrain.apply_request(request)
+        # Driver controls
+        x_button_driver.whileTrue(RotateToAprilTag(self.drive, self.limelight_handler, self.max_angular_rate))
+        left_bumper_driver.onTrue(InstantCommand(lambda: self.drivetrain.seed_field_centric()))
+        b_button_driver.onTrue(InstantCommand(lambda: self.set_speed_ratio(0.25)))
+        b_button_driver.onFalse(InstantCommand(lambda: self.set_speed_ratio(1)))
+        a_button_driver.whileTrue(
+            InstantCommand(
+                lambda: self.drivetrain.apply_request(
+                    lambda: self.drive.with_rotational_rate(.5 * self.max_angular_rate)
+                )
+            )
+        )
 
-    def apply_rotation(self):
-        """Apply rotation to the drivetrain with rate limiting."""
-        current_time = time.time()
-        if current_time - self.last_rotation_time >= 0.5:  # 500ms delay
-            print("Rotation command triggered")
-            rotation_request = self.drive.with_rotational_rate(.5 * self.max_angular_rate)
-            self.drivetrain.apply_request(rotation_request)
-            self.last_rotation_time = current_time
+    def configure_operator_controls(self):
+        """Configure operator controller bindings (mechanisms)."""
+        # Elevator buttons
+        x_button = JoystickButton(self.controller_operator, XboxController.Button.kX)
+        y_button = JoystickButton(self.controller_operator, XboxController.Button.kY)
+        a_button = JoystickButton(self.controller_operator, XboxController.Button.kA)
+        b_button = JoystickButton(self.controller_operator, XboxController.Button.kB)
+
+        # Elevator controls
+        x_button.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[XboxController.Button.kX]))
+        y_button.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[XboxController.Button.kY]))
+        a_button.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[XboxController.Button.kA]))
+        b_button.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[XboxController.Button.kB]))
+
+        # Arm controls
+        left_bumper = JoystickButton(self.controller_operator, XboxController.Button.kLeftBumper)
+        right_bumper = JoystickButton(self.controller_operator, XboxController.Button.kRightBumper)
+        left_trigger = Trigger(lambda: self.controller_operator.getLeftTriggerAxis() > 0.5)
+        right_trigger = Trigger(lambda: self.controller_operator.getRightTriggerAxis() > 0.5)
+
+        left_bumper.onTrue(self.arm.go_to_angle(self.arm.preset_angles[XboxController.Button.kLeftBumper]))
+        right_bumper.onTrue(self.arm.go_to_angle(self.arm.preset_angles[XboxController.Button.kRightBumper]))
+        left_trigger.onTrue(self.arm.go_to_angle(45.0))
+        right_trigger.onTrue(self.arm.go_to_angle(135.0))
+
+        # Shooter controls
+        back_button = JoystickButton(self.controller_operator, XboxController.Button.kBack)
+        self.shooter.set_speed_percentage(0.75)
+        back_button.whileTrue(self.shooter.shoot())  # Moved shooter to back button
+
+        # Default commands
+        self.arm.setDefaultCommand(self.arm.hold_position())
 
     def set_speed_ratio(self, ratio):
         """Sets the speed ratio based on button press/release."""
         self.speed_ratio = ratio
 
-    def configure_bindings(self):
-        """Configure button-to-command mappings."""
-        a_button = JoystickButton(self.joystick, self.joystick.Button.kA)
-        b_button = JoystickButton(self.joystick, self.joystick.Button.kB)
-
-
-        self.speed_ratio = 1  # Default speed ratio (no reduction)
-
-        # Set up the button press event (onTrue)
-        b_button.onTrue(InstantCommand(lambda: self.set_speed_ratio(0.25)))  # Set to 50% speed when pressed
-
-        # Set up the button release event (onFalse)
-        b_button.onFalse(InstantCommand(lambda: self.set_speed_ratio(1)))  # Reset to full speed when released
-
-        # Default drivetrain command
-        self.drivetrain.setDefaultCommand(
-            self.drivetrain.apply_request(lambda: self.drive
-                                          .with_velocity_x(-self.joystick.getLeftY() * self.max_speed * self.speed_ratio)
-                                          .with_velocity_y(-self.joystick.getLeftX() * self.max_speed * self.speed_ratio)
-                                          # .with_rotational_rate(-self.joystick.getRightX() * self.max_angular_rate)
-                                          )
-        )
-
-
-        # Ensure you have a default EventLoop from the CommandScheduler
-        default_loop = CommandScheduler.getInstance().getDefaultButtonLoop()
-
-
-        def print_action(button_name):
-            print(f"Button: {button_name}")
-
-        a_button_command = SequentialCommandGroup(
-            InstantCommand(lambda: print_action("A")),
-            InstantCommand(lambda: self.drivetrain.apply_request(lambda: self.brake))  # Apply the brake
-        )
-
-        b_button_command = SequentialCommandGroup(
-            InstantCommand(lambda: print_action("B")),
-            InstantCommand(
-                lambda: self.drivetrain.apply_request(
-                    lambda: self.point.with_module_direction(
-                        Rotation2d(-self.joystick.getLeftY(), -self.joystick.getLeftX())
-                    )
-                )
+    def get_autonomous_command(self) -> Command:
+        """Return the autonomous command."""
+        return RepeatCommand(
+            SequentialCommandGroup(
+                WaitCommand(10),
+                InstantCommand(self.rotate_drivetrain),
+                WaitCommand(1)
             )
         )
-
-        lb_button_command = SequentialCommandGroup(
-            InstantCommand(lambda: print_action("LB")),
-            InstantCommand(lambda: self.drivetrain.seed_field_centric())
-        )
-
-        x_button = JoystickButton(self.joystick, self.joystick.Button.kX)
-        left_bumper_button = JoystickButton(self.joystick, self.joystick.Button.kLeftBumper)
-        # Original button bindings remain unchanged
-        # a_button.whileTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(a_button_command)))
-        # b_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(b_button_command)))
-        left_bumper_button.onTrue(InstantCommand(lambda: CommandScheduler.getInstance().schedule(lb_button_command)))
-
-
-
-        x_button.whileTrue(RotateToAprilTag(self.drive, self.limelight_handler, self.max_angular_rate))
-        rotation_command = RunCommand(
-            self.apply_rotation,
-            # name="Rotation Command"
-        )
-        # a_button.whileTrue(InstantCommand(self.apply_rotation))
-        a_button.onTrue(rotation_command)
-
-
-
-        ############################################
-        ############################################
-        ############################################
-        # START NEW CODE FROM ALEX
-        ############################################
-        ############################################
-        ############################################
-
-        ## ELEVATOR CODE
-        # Create buttons for elevator control
-        x_button_elevator = JoystickButton(self.joystick, self.joystick.Button.kX)
-        y_button_elevator = JoystickButton(self.joystick, self.joystick.Button.kY)
-        a_button_elevator = JoystickButton(self.joystick, self.joystick.Button.kA)
-        b_button_elevator = JoystickButton(self.joystick, self.joystick.Button.kB)
-
-        # Map buttons to elevator heights
-        x_button_elevator.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[self.joystick.Button.kX]))
-        y_button_elevator.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[self.joystick.Button.kY]))
-        a_button_elevator.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[self.joystick.Button.kA]))
-        b_button_elevator.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[self.joystick.Button.kB]))
-
-        ## ARM CODE
-        # Create buttons for arm control
-        left_bumper = JoystickButton(self.joystick, self.joystick.Button.kLeftBumper)
-        right_bumper = JoystickButton(self.joystick, self.joystick.Button.kRightBumper)
-        back_button = JoystickButton(self.joystick, self.joystick.Button.kBack)
-        start_button = JoystickButton(self.joystick, self.joystick.Button.kStart)
-
-        # Map buttons to arm angles
-        left_bumper.onTrue(self.arm.go_to_angle(self.arm.preset_angles[self.joystick.Button.kLeftBumper]))
-        right_bumper.onTrue(self.arm.go_to_angle(self.arm.preset_angles[self.joystick.Button.kRightBumper]))
-        back_button.onTrue(self.arm.go_to_angle(self.arm.preset_angles[self.joystick.Button.kBack]))
-        start_button.onTrue(self.arm.go_to_angle(self.arm.preset_angles[self.joystick.Button.kStart]))
-
-
-        ## SHOOTER CODE
-        # Optional: Add a default command to hold position
-        self.arm.setDefaultCommand(self.arm.hold_position())
-
-        # Optionally set default speed if 75% isn't appropriate
-        self.shooter.set_speed_percentage(0.75)  # 75% speed
-
-        # In RobotContainer.configure_bindings(), add:
-        # Create button for shooter control - using right trigger as an example
-        right_trigger = Trigger(lambda: self.joystick.getRightTriggerAxis() > 0.5)
-        right_trigger.whileTrue(self.shooter.shoot())
-
-        ############################################
-        ############################################
-        ############################################
-        # END NEW CODE FROM ALEX
-        ############################################
-        ############################################
-        ############################################
 
     def rotate_drivetrain(self):
         """Helper method to rotate the drivetrain."""
         rotation_request = self.drive.with_rotational_rate(.5 * self.max_angular_rate)
         self.drivetrain.apply_request(rotation_request)
-
-
-    def get_autonomous_command(self) -> Command:
-        time.sleep(10)
-        """Return the autonomous command."""
-        return RepeatCommand(
-            SequentialCommandGroup(
-                WaitCommand(10),  # Wait 10 seconds
-                InstantCommand(self.rotate_drivetrain),
-                WaitCommand(1)  # Rotate for 1 second
-            )
-        )
