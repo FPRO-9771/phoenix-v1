@@ -40,7 +40,7 @@ class RobotContainer:
         # Initialize subsystems
         self.drivetrain = tuner_constants.DriveTrain
         self.limelight_handler = LimelightHandler(debug=True)
-        self.elevator = Elevator(15)
+        self.elevator = Elevator(motor_id=15, range_sensor_id=20)  # Use your actual CAN IDs
         self.arm = Arm(16)
         self.shooter = Shooter(17)
 
