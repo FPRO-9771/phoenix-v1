@@ -4,6 +4,7 @@ from phoenix6.configs import TalonFXConfiguration, Slot0Configs
 from phoenix6.signals import NeutralModeValue
 from phoenix6.controls import VelocityVoltage
 from wpilib import XboxController
+from typing import Callable
 
 class Shooter(SubsystemBase):
     """
@@ -11,7 +12,7 @@ class Shooter(SubsystemBase):
     Uses velocity control for consistent shooting power.
     """
     
-    def __init__(self, motor_id: int, max_rpm: float = 6000):
+    def __init__(self, motor_id: int, max_rpm: float = 2000):
         """Initialize the shooter subsystem."""
         super().__init__()
         
@@ -52,37 +53,42 @@ class Shooter(SubsystemBase):
     def get_current_rpm(self) -> float:
         """Get the current motor RPM."""
         return self.motor.get_velocity().value * 60.0  # Convert RPS to RPM
-        
-    def shoot(self) -> Command:
-        """Create a command to activate the shooter."""
-        class ShooterCommand(Command):
-            def __init__(self, shooter):
+
+    def manual(self, percentage_func: Callable[[], float]) -> Command:
+        """Create a command that continuously updates shooter speed based on a trigger input."""
+
+        class ManualRunCommand(Command):
+            def __init__(self, shooter, percentage_func: Callable[[], float]):
                 super().__init__()
                 self.shooter = shooter
+                self.percentage_func = percentage_func  # Store function instead of static value
                 self.addRequirements(shooter)
-                
+
             def initialize(self):
-                print(f"Starting shooter at {self.shooter.default_speed_percentage * 100}% speed")
-                target_rps = (self.shooter.default_speed_percentage * self.shooter.max_rpm) / 60.0
+                print("Shooter command started")
+
+            def execute(self):
+                percentage = self.percentage_func()  # Call function to get live trigger value
+                if abs(percentage) <= 0.05:  # Ignore small values
+                    self.shooter.stop()
+                    return
+
+                target_rps = (percentage * self.shooter.max_rpm) / 60.0
                 self.shooter.velocity_request.velocity = target_rps
                 self.shooter.motor.set_control(self.shooter.velocity_request)
                 self.shooter.is_running = True
-                
-            def execute(self):
-                current_rpm = self.shooter.get_current_rpm()
-                if abs(current_rpm - (self.shooter.default_speed_percentage * self.shooter.max_rpm)) > 100:
-                    print(f"Warning: Shooter speed ({current_rpm} RPM) not at target")
-                
+                print(f"Shooter running at {percentage * 100:.1f}% speed (RPM: {target_rps * 60:.0f})")
+
             def end(self, interrupted):
                 print("Stopping shooter")
                 self.shooter.velocity_request.velocity = 0
                 self.shooter.motor.set_control(self.shooter.velocity_request)
                 self.shooter.is_running = False
-                
+
             def isFinished(self):
-                return False
-                
-        return ShooterCommand(self)
+                return False  # Runs continuously while trigger is held
+
+        return ManualRunCommand(self, percentage_func)
     
     def stop(self):
         """Stop the shooter motor."""

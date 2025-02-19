@@ -3,7 +3,9 @@ from phoenix6.hardware import TalonFX, CANrange
 from phoenix6.configs import TalonFXConfiguration, Slot0Configs, CANrangeConfiguration
 from phoenix6.configs.config_groups import ToFParamsConfigs, FovParamsConfigs
 from phoenix6.signals import NeutralModeValue
+from phoenix6.controls import VelocityVoltage, Follower
 from wpilib import XboxController
+from typing import Callable
 
 class Elevator(SubsystemBase):
     """
@@ -11,7 +13,7 @@ class Elevator(SubsystemBase):
     Uses CANrange sensor for height measurement.
     """
     
-    def __init__(self, motor_id: int, range_sensor_id: int):
+    def __init__(self, motor_id: int, follower_motor_id: int, range_sensor_id: int):
         """Initialize the elevator subsystem.
         
         Args:
@@ -22,7 +24,11 @@ class Elevator(SubsystemBase):
         
         # Initialize motor
         self.motor = TalonFX(motor_id)
-        
+        self.follower_motor = TalonFX(follower_motor_id)
+
+        # Set follower motor to follow the main motor in reverse
+        self.follower_motor.set_control(Follower(motor_id, oppose_master_direction=True))
+
         # Initialize range sensor
         self.range_sensor = CANrange(range_sensor_id)
         
@@ -40,7 +46,10 @@ class Elevator(SubsystemBase):
         
         # Apply configuration
         self.range_sensor.configurator.apply(range_config)
-        
+
+        self.max_rpm = 5000
+        self.velocity_request = VelocityVoltage(0)
+
         # Configure motor
         motor_configs = TalonFXConfiguration()
         
@@ -135,11 +144,46 @@ class Elevator(SubsystemBase):
                     print(f"Elevator reached target height: {self.target_height:.2f}m")
                     
         return ElevatorMoveCommand(self, height)
-    
+
+    def manual(self, percentage_func: Callable[[], float]) -> Command:
+
+        class ManualRunCommand(Command):
+            def __init__(self, elevator, percentage_func: Callable[[], float]):
+                super().__init__()
+                self.elevator = elevator
+                self.percentage_func = percentage_func  # Store function instead of static value
+                self.addRequirements(elevator)
+
+            def initialize(self):
+                print("Elevator manual command started")
+
+            def execute(self):
+                percentage = self.percentage_func()  # Call function to get live trigger value
+                if abs(percentage) <= 0.1:  # Ignore small values
+                    self.elevator.stop()
+                    return
+                #
+                target_rps = (percentage * self.elevator.max_rpm) / 60.0
+                self.elevator.velocity_request.velocity = target_rps
+                self.elevator.motor.set_control(self.elevator.velocity_request)
+                self.elevator.is_running = True
+                print(f"Elevator running at {percentage * 100:.1f}% speed (RPM: {target_rps * 60:.0f})")
+
+            def end(self, interrupted):
+                print("Stopping elevator")
+                self.elevator.velocity_request.velocity = 0
+                self.elevator.motor.set_control(self.elevator.velocity_request)
+                self.elevator.is_running = False
+
+            def isFinished(self):
+                return False  # Runs continuously while trigger is held
+
+        return ManualRunCommand(self, percentage_func)
+
     def stop(self):
         """Stop the elevator motor."""
-        self.motor.set_voltage(0)
-        
+        self.motor.set(0)
+
     def periodic(self):
         """Periodic update function for telemetry and monitoring."""
         current_height = self.get_current_height()
@@ -152,5 +196,5 @@ class Elevator(SubsystemBase):
             self.last_reported_height = current_height
             
         # Check if height is within safe limits
-        if current_height < self.MIN_HEIGHT or current_height > self.MAX_HEIGHT:
-            print(f"WARNING: Elevator height {current_height:.2f}m outside safe range!")
+        # if current_height < self.MIN_HEIGHT or current_height > self.MAX_HEIGHT:
+        #     print(f"WARNING: Elevator height {current_height:.2f}m outside safe range!")
