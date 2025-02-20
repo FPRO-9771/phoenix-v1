@@ -15,35 +15,20 @@ class Shooter(SubsystemBase):
     def __init__(self, motor_id: int, max_rpm: float = 2000):
         """Initialize the shooter subsystem."""
         super().__init__()
-        
-        # Initialize motor
+
+        # Motor setup
         self.motor = TalonFX(motor_id)
-        
-        # Configure motor
-        configs = TalonFXConfiguration()
-        
-        # Velocity control configuration
-        slot0 = Slot0Configs()
-        slot0.k_p = 0.05    # Velocity control gains
-        slot0.k_i = 0.0
-        slot0.k_d = 0.0
-        slot0.k_v = 0.12    # Feed forward gain
-        configs.slot0 = slot0
-        
-        # Set motor to coast mode when stopped
-        configs.motor_output.neutral_mode = NeutralModeValue.COAST
-        
-        # Apply configurations
-        self.motor.configurator.apply(configs)
-        
-        # Constants
         self.max_rpm = max_rpm
-        self.default_speed_percentage = 0.75  # 75% of max speed by default
-        
-        # Create velocity control request
+
+        # Motor configurations
+        configs = TalonFXConfiguration()
+        slot0 = Slot0Configs()
+        slot0.k_p = 0.05
+        slot0.k_v = 0.12
+        configs.slot0 = slot0
+        self.motor.configurator.apply(configs)
+
         self.velocity_request = VelocityVoltage(0)
-        
-        # Current state
         self.is_running = False
         
     def set_speed_percentage(self, percentage: float):
