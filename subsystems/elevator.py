@@ -5,6 +5,14 @@ from phoenix6.signals import NeutralModeValue
 from phoenix6.hardware import CANrange
 from wpilib import SmartDashboard
 from typing import Dict
+from commands2 import SubsystemBase, Command
+from phoenix6.hardware import TalonFX, CANrange
+from phoenix6.configs import TalonFXConfiguration, Slot0Configs, CANrangeConfiguration
+from phoenix6.configs.config_groups import ToFParamsConfigs, FovParamsConfigs
+from phoenix6.signals import NeutralModeValue
+from phoenix6.controls import VelocityVoltage, Follower
+from wpilib import XboxController
+from typing import Callable
 
 class Elevator(SubsystemBase):
     """
@@ -41,7 +49,24 @@ class Elevator(SubsystemBase):
         
         # Range Sensor
         self.range_sensor = CANrange(range_sensor_id)
-        
+        self.range_sensor = CANrange(range_sensor_id)
+
+        # Configure range sensor
+        range_config = CANrangeConfiguration()
+
+        # Configure TOF (Time of Flight) parameters
+        tof_params = ToFParamsConfigs()
+
+        tof_params = ToFParamsConfigs()
+        tof_params.min_distance = 0.05  # Set the minimum measurable distance (5cm)
+        tof_params.max_distance = 2.0  # Set max limit (e.g., 2 meters)
+        range_config.with_to_f_params(tof_params)
+        # You might need to adjust these based on your needs
+        range_config.with_to_f_params(tof_params)
+
+        # Configure FOV (Field of View) parameters
+        fov_params = FovParamsConfigs()
+        range_config.with_fov_params(fov_params)
         # Motor configuration
         configs = TalonFXConfiguration()
         configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
