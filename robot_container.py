@@ -24,7 +24,7 @@ from phoenix6.swerve import requests, swerve_module
 from subsystems.arm import Arm
 from subsystems.command_swerve_drivetrain import CommandSwerveDrivetrain
 from subsystems.elevator import Elevator
-from subsystems.shooter import Shooter
+# from subsystems.shooter import Shooter
 from subsystems.auton import Auton
 from telemetry import Telemetry
 from generated.tuner_constants import TunerConstants
@@ -60,7 +60,7 @@ class RobotContainer:
         self.limelight_handler = LimelightHandler(debug=True)
         self.elevator = Elevator()  # Use your actual CAN IDs
         self.arm = Arm(22, 50, 300)
-        self.shooter = Shooter(300)
+        # self.shooter = Shooter(300)
         self.auton = Auton()
 
         # Setting up bindings for necessary control of the swerve drive platform
@@ -99,7 +99,7 @@ class RobotContainer:
 
         self.configure_bindings()
 
-        self.shooter.test_motor()
+        # self.shooter.test_motor()
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""
@@ -214,13 +214,13 @@ class RobotContainer:
             self.arm.manual(lambda: self.controller_operator.getHID().getRightY() * -1)
         )
 
-        Trigger(lambda: self.controller_operator.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
-            self.shooter.manual(lambda: self.controller_operator.getHID().getLeftTriggerAxis())
-        )
-
-        Trigger(lambda: self.controller_operator.getHID().getRightTriggerAxis() > 0.05).whileTrue(
-            self.shooter.manual(lambda: self.controller_operator.getHID().getRightTriggerAxis() * -1 * .1)
-        )
+        # Trigger(lambda: self.controller_operator.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
+        #     self.shooter.manual(lambda: self.controller_operator.getHID().getLeftTriggerAxis())
+        # )
+        #
+        # Trigger(lambda: self.controller_operator.getHID().getRightTriggerAxis() > 0.05).whileTrue(
+        #     self.shooter.manual(lambda: self.controller_operator.getHID().getRightTriggerAxis() * -1 * .1)
+        # )
 
         # back_button.whileTrue(self.shooter.shoot())  # Moved shooter to back button
 

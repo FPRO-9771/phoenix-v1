@@ -7,6 +7,7 @@ from wpilib import XboxController
 from wpimath.geometry import Rotation2d
 import math
 from typing import Callable
+from constants import MOTOR_IDS
 
 class Arm(SubsystemBase):
     """
@@ -20,7 +21,7 @@ class Arm(SubsystemBase):
         super().__init__()
         
         # Initialize motor
-        self.motor = TalonFX(motor_id)
+        self.motor = TalonFX(MOTOR_IDS["wrist"])
 
         # Configure motor
         configs = TalonFXConfiguration()
@@ -70,9 +71,10 @@ class Arm(SubsystemBase):
         
     def get_current_angle(self) -> float:
         """Get the current angle of the arm in degrees."""
-        motor_rotations = self.motor.get_position().value
-        arm_rotations = motor_rotations / self.gear_ratio
-        return (arm_rotations * 360.0) % 360.0
+        # motor_rotations = self.motor.get_position().value
+        # arm_rotations = motor_rotations / self.gear_ratio
+        # return (arm_rotations * 360.0) % 360.0
+        return self.motor.get_position().value * -1
 
     def angle_to_motor_rotations(self, angle: float) -> float:
         """Convert an angle in degrees to motor rotations."""
