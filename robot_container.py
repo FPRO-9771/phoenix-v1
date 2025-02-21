@@ -1,4 +1,3 @@
-
 import commands2
 import commands2.button
 from commands2.button import Trigger
@@ -11,7 +10,6 @@ from telemetry import Telemetry
 from phoenix6 import swerve
 from wpimath.geometry import Rotation2d
 from wpimath.units import rotationsToRadians
-
 
 import math
 from commands2 import InstantCommand, PrintCommand, Command, CommandScheduler, SequentialCommandGroup, RunCommand
@@ -29,6 +27,7 @@ from telemetry import Telemetry
 from generated.tuner_constants import TunerConstants
 from commands2.button import JoystickButton
 from subsystems.rotate_to_april_tag import RotateToAprilTag
+from subsystems.drive_to_april_tag import DriveToAprilTag  # Add this import
 from handlers.limelight_handler import LimelightHandler
 from commands2 import (
     CommandScheduler, 
@@ -84,7 +83,6 @@ class RobotContainer:
         if self.controller_driver and self.controller_operator:
             self.configure_bindings()
 
-
     def configure_bindings(self):
         """Configure button-to-command mappings."""
         self.configure_driver_controls()
@@ -127,12 +125,18 @@ class RobotContainer:
                 self.drivetrain.runOnce(lambda: self.drivetrain.seed_field_centric())
             )
 
-            # Driver buttons
+            # Driver buttons for April Tag functionality
             x_button_driver = self.controller_driver.x()
+            y_button_driver = self.controller_driver.y()
             
-            # Fix the RotateToAprilTag command to use _drive instead of drive
+            # X button rotates to face April tag
             x_button_driver.whileTrue(
                 RotateToAprilTag(self._drive, self.limelight_handler, self._max_angular_rate)
+            )
+            
+            # Y button drives to April tag
+            y_button_driver.whileTrue(
+                DriveToAprilTag(self._drive, self.limelight_handler, self._max_speed, self._max_angular_rate)
             )
 
             # SysId routines
