@@ -25,6 +25,7 @@ from subsystems.arm import Arm
 from subsystems.command_swerve_drivetrain import CommandSwerveDrivetrain
 from subsystems.elevator import Elevator
 from subsystems.shooter import Shooter
+from subsystems.auton import Auton
 from telemetry import Telemetry
 from generated.tuner_constants import TunerConstants
 from commands2.button import JoystickButton
@@ -57,9 +58,10 @@ class RobotContainer:
 
         # Initialize subsystems
         self.limelight_handler = LimelightHandler(debug=True)
-        self.elevator = Elevator(motor_id=20, follower_motor_id=21, range_sensor_id=41)  # Use your actual CAN IDs
-        self.arm = Arm(22)
-        self.shooter = Shooter(23)
+        self.elevator = Elevator()  # Use your actual CAN IDs
+        self.arm = Arm(22, 50, 300)
+        self.shooter = Shooter(300)
+        self.auton = Auton()
 
         # Setting up bindings for necessary control of the swerve drive platform
         self._drive = (
@@ -96,6 +98,8 @@ class RobotContainer:
         self.drivetrain.register_telemetry(self._logger.telemeterize)
 
         self.configure_bindings()
+
+        self.shooter.test_motor()
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""
@@ -177,16 +181,19 @@ class RobotContainer:
     def configure_operator_controls(self):
         """Configure operator controller bindings (mechanisms)."""
         # Elevator buttons
-        x_button = JoystickButton(self.controller_operator, XboxController.Button.kX)
-        y_button = JoystickButton(self.controller_operator, XboxController.Button.kY)
-        a_button = JoystickButton(self.controller_operator, XboxController.Button.kA)
-        b_button = JoystickButton(self.controller_operator, XboxController.Button.kB)
+        # x_button = JoystickButton(self.controller_operator, XboxController.Button.kX)
+        # y_button = JoystickButton(self.controller_operator, XboxController.Button.kY)
+        # a_button = JoystickButton(self.controller_operator, XboxController.Button.kA)
+        # b_button = JoystickButton(self.controller_operator, XboxController.Button.kB)
 
         # Elevator controls
-        # x_button.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[XboxController.Button.kX]))
-        # y_button.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[XboxController.Button.kY]))
-        # a_button.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[XboxController.Button.kA]))
-        # b_button.onTrue(self.elevator.go_to_height(self.elevator.preset_heights[XboxController.Button.kB]))
+        self.controller_operator.a().onTrue(self.auton.shoot(2))
+        self.controller_operator.x().onTrue(self.auton.shoot(3))
+        self.controller_operator.y().onTrue(self.auton.shoot(4))
+        # self.controller_operator.x().onTrue(self.elevator.go_to_height(self.elevator.preset_rotations[XboxController.Button.kX]))
+        # self.controller_operator.y().onTrue(self.elevator.go_to_height(self.elevator.preset_rotations[XboxController.Button.kY]))
+        # self.controller_operator.a().onTrue(self.elevator.go_to_height(self.elevator.preset_rotations[XboxController.Button.kA]))
+        self.controller_operator.b().onTrue(self.elevator.go_to_height(self.elevator.preset_rotations["intake"]))
 
         # Arm controls
         # left_bumper = JoystickButton(self.controller_operator, XboxController.Button.kLeftBumper)
@@ -212,7 +219,7 @@ class RobotContainer:
         )
 
         Trigger(lambda: self.controller_operator.getHID().getRightTriggerAxis() > 0.05).whileTrue(
-            self.shooter.manual(lambda: self.controller_operator.getHID().getRightTriggerAxis() * -1)
+            self.shooter.manual(lambda: self.controller_operator.getHID().getRightTriggerAxis() * -1 * .1)
         )
 
         # back_button.whileTrue(self.shooter.shoot())  # Moved shooter to back button

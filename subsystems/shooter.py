@@ -5,6 +5,7 @@ from phoenix6.signals import NeutralModeValue
 from phoenix6.controls import VelocityVoltage
 from wpilib import XboxController
 from typing import Callable
+from constants import MOTOR_IDS
 
 class Shooter(SubsystemBase):
     """
@@ -12,44 +13,44 @@ class Shooter(SubsystemBase):
     Uses velocity control for consistent shooting power.
     """
     
-    def __init__(self, motor_id: int, max_rpm: float = 2000):
+    def __init__(self, max_rpm: float = 2000):
         """Initialize the shooter subsystem."""
         super().__init__()
         
         # Initialize motor
-        self.motor = TalonFX(motor_id)
+        self.motor = TalonFX(MOTOR_IDS["shooter"])
         
         # Configure motor
         configs = TalonFXConfiguration()
-        
-        # Velocity control configuration
-        slot0 = Slot0Configs()
-        slot0.k_p = 0.05    # Velocity control gains
-        slot0.k_i = 0.0
-        slot0.k_d = 0.0
-        slot0.k_v = 0.12    # Feed forward gain
-        configs.slot0 = slot0
-        
-        # Set motor to coast mode when stopped
-        configs.motor_output.neutral_mode = NeutralModeValue.COAST
-        
-        # Apply configurations
-        self.motor.configurator.apply(configs)
-        
-        # Constants
+        #
+        # # Velocity control configuration
+        # slot0 = Slot0Configs()
+        # slot0.k_p = 0.05    # Velocity control gains
+        # slot0.k_i = 0.0
+        # slot0.k_d = 0.0
+        # slot0.k_v = 0.12    # Feed forward gain
+        # configs.slot0 = slot0
+        #
+        # # Set motor to coast mode when stopped
+        # configs.motor_output.neutral_mode = NeutralModeValue.COAST
+        #
+        # # Apply configurations
+        # self.motor.configurator.apply(configs)
+        #
+        # # Constants
         self.max_rpm = max_rpm
         self.default_speed_percentage = 0.75  # 75% of max speed by default
-        
-        # Create velocity control request
+        #
+        # # Create velocity control request
         self.velocity_request = VelocityVoltage(0)
-        
-        # Current state
+        #
+        # # Current state
         self.is_running = False
         
     def set_speed_percentage(self, percentage: float):
         """Set the shooter speed as a percentage of max RPM."""
         self.default_speed_percentage = max(0.0, min(1.0, percentage))
-        
+
     def get_current_rpm(self) -> float:
         """Get the current motor RPM."""
         return self.motor.get_velocity().value * 60.0  # Convert RPS to RPM
@@ -89,15 +90,22 @@ class Shooter(SubsystemBase):
                 return False  # Runs continuously while trigger is held
 
         return ManualRunCommand(self, percentage_func)
-    
+
     def stop(self):
         """Stop the shooter motor."""
         self.velocity_request.velocity = 0
         self.motor.set_control(self.velocity_request)
         self.is_running = False
-        
+
     def periodic(self):
         """Periodic update function."""
         if self.is_running:
             current_rpm = self.get_current_rpm()
             print(f"Shooter RPM: {current_rpm:.0f}")
+
+    def test_motor(self):
+        """Run the shooter motor at 25% power for testing."""
+        print("Testing Minion motor...")
+        from phoenix6.controls import DutyCycleOut
+
+        self.motor.set_control(DutyCycleOut(0.25))  # Set to 25% power
