@@ -26,6 +26,7 @@ from subsystems.command_swerve_drivetrain import CommandSwerveDrivetrain
 from subsystems.elevator import Elevator
 # from subsystems.shooter import Shooter
 from subsystems.auton import Auton
+from subsystems.drive_to_april_tag import DriveToAprilTag
 from telemetry import Telemetry
 from generated.tuner_constants import TunerConstants
 from commands2.button import JoystickButton
@@ -133,6 +134,11 @@ class RobotContainer:
                     Rotation2d(-self.controller_driver.getLeftY(), -self.controller_driver.getLeftX())
                 )
             )
+        )
+        y_button_driver = self.controller_driver.y()
+        # Y button drives to April tag
+        y_button_driver.whileTrue(
+            DriveToAprilTag(self._drive, self.limelight_handler, self._max_speed, self._max_angular_rate)
         )
 
         # Run SysId routines when holding back/start and X/Y.
