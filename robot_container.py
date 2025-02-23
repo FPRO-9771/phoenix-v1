@@ -1,90 +1,216 @@
-import math
-from commands2 import InstantCommand, PrintCommand, Command, CommandScheduler
-from commands2.button import Trigger
-from wpilib import XboxController
 from wpilib.event import EventLoop
+
+from commands2 import InstantCommand
+from commands2.button import Trigger
+from commands2.button import CommandXboxController
+from commands2.sysid import SysIdRoutine
+
+from phoenix6 import swerve, utils
+
+from wpimath.units import rotationsToRadians
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
-from phoenix6 import utils
-from phoenix6.swerve import requests, swerve_module
-from subsystems.command_swerve_drivetrain import CommandSwerveDrivetrain
+
 from telemetry import Telemetry
-from generated import tuner_constants
-from commands2 import InstantCommand, CommandScheduler
+from generated.tuner_constants import TunerConstants
+
+from subsystems.arm import Arm
+from subsystems.elevator import Elevator
+from subsystems.shooter import Shooter
+from subsystems.auton import Auton
+
+from handlers.limelight_handler import LimelightHandler
+
 
 class RobotContainer:
+
     def __init__(self):
         """Initialize the RobotContainer and configure bindings."""
-        self.max_speed = tuner_constants.k_speed_at_12_volts_mps * 0.5  # Top speed
-        self.max_angular_rate = 1.5 * math.pi  # Max angular velocity (3/4 rotation per second)
+        self._max_speed = (
+            TunerConstants.speed_at_12_volts
+        )  # speed_at_12_volts desired top speed
+        self._max_angular_rate = rotationsToRadians(
+            0.75
+        )  # 3/4 of a rotation per second max angular velocity
 
-        # Joystick and drivetrain initialization
-        self.joystick = XboxController(0)
-        self.drivetrain = tuner_constants.DriveTrain
+        # Initialize two controllers
+        self.controller_driver = CommandXboxController(0)  # Driver controller for driving/vision
+        self.controller_operator = CommandXboxController(1)  # Operator controller for mechanisms
 
-        # Swerve requests
-        self.drive = requests.FieldCentric() \
-            .with_deadband(self.max_speed * 0.1) \
-            .with_rotational_deadband(self.max_angular_rate * 0.1) \
-            .with_drive_request_type(swerve_module.SwerveModule.DriveRequestType.OPEN_LOOP_VOLTAGE)
+        # Initialize subsystems
+        self.limelight_handler = LimelightHandler(debug=True)
+        self.elevator = Elevator(1000)  # Use your actual CAN IDs
+        self.arm = Arm(300)
+        self.shooter = Shooter()
+        self.auton = Auton()
 
-        self.brake = requests.SwerveDriveBrake()
-        self.point = requests.PointWheelsAt()
+        # Setting up bindings for necessary control of the swerve drive platform
+        self._drive = (
+            swerve.requests.FieldCentric()
+            .with_deadband(self._max_speed * 0.1)
+            .with_rotational_deadband(
+                self._max_angular_rate * 0.1
+            )  # Add a 10% deadband
+            .with_drive_request_type(
+                swerve.SwerveModule.DriveRequestType.OPEN_LOOP_VOLTAGE
+            )  # Use open-loop control for drive motors
+        )
+        self._brake = swerve.requests.SwerveDriveBrake()
+        self._point = swerve.requests.PointWheelsAt()
+
+        self._logger = Telemetry(self._max_speed)
+
+        self.drivetrain = TunerConstants.create_drivetrain()
 
         # Telemetry
-        self.logger = Telemetry(self.max_speed)
-
         self.event_loop = EventLoop()
 
-        # Configure button bindings
-        self.configure_bindings()
+        # Speed ratio for drivetrain
+        self.speed_ratio = 1
+        self.rotation_ratio = 1
 
         # If in simulation, seed_field_centric position
         if utils.is_simulation():
             self.drivetrain.seed_field_centric()
 
         # Register telemetry
-        self.drivetrain.register_telemetry(self.logger.telemeterize)
+        self.drivetrain.register_telemetry(self._logger.telemeterize)
+
+        self.configure_bindings()
+
+        # self.shooter.test_motor()
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""
-        # Default drivetrain command
+        self.configure_driver_controls()
+        self.configure_operator_controls()
+
+    # def get_speed_multiplier(self):
+    #     "returns the current speed multiplier"
+
+    def configure_driver_controls(self):
+        """Configure driver controller bindings (driving and vision)."""
+
+        ctrl = self.controller_driver
+
+        # Drivetrain default command
         self.drivetrain.setDefaultCommand(
-            self.drivetrain.apply_request(lambda: self.drive
-                                          .with_velocity_x(-self.joystick.getLeftY() * self.max_speed)
-                                          .with_velocity_y(-self.joystick.getLeftX() * self.max_speed)
-                                          .with_rotational_rate(-self.joystick.getRightX() * self.max_angular_rate)
-                                          )
-        )
-
-        # Ensure you have a default EventLoop from the CommandScheduler
-        default_loop = CommandScheduler.getInstance().getDefaultButtonLoop()
-
-        self.joystick.A(self.event_loop).ifHigh(
-            lambda: CommandScheduler.getInstance().schedule(
-                InstantCommand(lambda: self.drivetrain.apply_request(lambda: self.brake))
-            )
-        )
-
-        # Point wheels on B button
-        self.joystick.B(self.event_loop).ifHigh(
-            lambda: CommandScheduler.getInstance().schedule(
-                InstantCommand(
-                    lambda: self.drivetrain.apply_request(
-                        lambda: self.point.with_module_direction(
-                            Rotation2d(-self.joystick.getLeftY(), -self.joystick.getLeftX())
-                        )
-                    )
+            # Drivetrain will execute this command periodically
+            self.drivetrain.apply_request(
+                lambda: (
+                    self._drive.with_velocity_x(
+                        -ctrl.getLeftY() * self._max_speed * self.speed_ratio
+                    )  # Drive forward with negative Y (forward)
+                    .with_velocity_y(
+                        -ctrl.getLeftX() * self._max_speed * self.speed_ratio
+                    )  # Drive left with negative X (left)
+                    .with_rotational_rate(
+                        -ctrl.getRightX() * self._max_angular_rate * self.rotation_ratio
+                    )  # Drive counterclockwise with negative X (left)
                 )
             )
         )
 
-        # Reset field-centric heading on left bumper
-        self.joystick.leftBumper(self.event_loop).ifHigh(
-            lambda: CommandScheduler.getInstance().schedule(
-                InstantCommand(lambda: self.drivetrain.seed_field_centric())
+        ctrl.a().whileTrue(self.drivetrain.apply_request(lambda: self._brake))
+        ctrl.b().whileTrue(
+            self.drivetrain.apply_request(
+                lambda: self._point.with_module_direction(
+                    Rotation2d(-ctrl.getLeftY(), -ctrl.getLeftX())
+                )
             )
         )
 
-    def get_autonomous_command(self) -> Command:
-        """Return the autonomous command."""
-        return PrintCommand("No autonomous command configured")
+        # Run SysId routines when holding back/start and X/Y.
+        # Note that each routine should be run exactly once in a single log.
+        (ctrl.back() & ctrl.y()).whileTrue(
+            self.drivetrain.sys_id_dynamic(SysIdRoutine.Direction.kForward)
+        )
+        (ctrl.back() & ctrl.x()).whileTrue(
+            self.drivetrain.sys_id_dynamic(SysIdRoutine.Direction.kReverse)
+        )
+        (ctrl.start() & ctrl.y()).whileTrue(
+            self.drivetrain.sys_id_quasistatic(SysIdRoutine.Direction.kForward)
+        )
+        (ctrl.start() & ctrl.x()).whileTrue(
+            self.drivetrain.sys_id_quasistatic(SysIdRoutine.Direction.kReverse)
+        )
+
+        # reset the field-centric heading on left bumper press
+        ctrl.leftBumper().onTrue(
+            self.drivetrain.runOnce(lambda: self.drivetrain.seed_field_centric())
+        )
+
+        self.drivetrain.register_telemetry(
+            lambda state: self._logger.telemeterize(state)
+        )
+
+        # slow mode with buttons
+        ctrl.rightBumper().onTrue(
+            InstantCommand(lambda: self.set_speed_ratio(0.2))
+        )
+        ctrl.rightBumper().onFalse(
+            InstantCommand(lambda: self.set_speed_ratio(1))
+        )
+
+        # trying to do some autonomy
+        # ctrl.y().onTrue(
+        #     # self.drivetrain.apply_request(
+        #     #     lambda: self._drive.with_velocity_y(-3)  # Adjust speed if needed
+        #     # )
+        #     self.auton.drive(self.drivetrain, self._drive, self._max_angular_rate)
+        # )
+        #
+        # ctrl.y().onFalse(
+        #     self.drivetrain.apply_request(lambda: self._drive.with_rotational_rate(0))
+        # )
+
+    def configure_operator_controls(self):
+        """Configure operator controller bindings (mechanisms)."""
+
+        ctrl = self.controller_operator
+
+        # Automated controls
+        ctrl.a().onTrue(self.auton.shoot(2))
+        ctrl.x().onTrue(self.auton.shoot(3))
+        ctrl.y().onTrue(self.auton.shoot(4))
+        ctrl.b().onTrue(self.auton.intake())
+
+
+        # Manual controls with buttons
+        Trigger(lambda: abs(ctrl.getHID().getLeftY()) > 0.1).whileTrue(
+            self.elevator.manual(lambda: ctrl.getHID().getLeftY())
+        )
+
+        Trigger(lambda: abs(ctrl.getHID().getRightY()) > 0.1).whileTrue(
+            self.arm.manual(lambda: ctrl.getHID().getRightY() * -1)
+        )
+
+        Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
+            self.shooter.manual(lambda: ctrl.getHID().getLeftTriggerAxis())
+        )
+
+        Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).whileTrue(
+            self.shooter.manual(lambda: ctrl.getHID().getRightTriggerAxis() * -1)
+        )
+
+        # Default commands
+        # self.arm.setDefaultCommand(self.arm.hold_position())
+
+    def set_speed_ratio(self, ratio):
+        """Sets the speed ratio based on button press/release."""
+        self.speed_ratio = ratio
+        self.rotation_ratio = min(1, ratio * 1.5)
+
+    # def get_autonomous_command(self) -> Command:
+    #     """Return the autonomous command."""
+    #     return RepeatCommand(
+    #         SequentialCommandGroup(
+    #             WaitCommand(10),
+    #             InstantCommand(self.rotate_drivetrain),
+    #             WaitCommand(1)
+    #         )
+    #     )
+    #
+    # def rotate_drivetrain(self):
+    #     """Helper method to rotate the drivetrain."""
+    #     rotation_request = self.drive.with_rotational_rate(.5 * self.max_angular_rate)
+    #     self.drivetrain.apply_request(rotation_request)
