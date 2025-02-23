@@ -5,13 +5,14 @@
 import wpilib
 from commands2 import CommandScheduler
 from robot_container import RobotContainer
+import time
 
 class Robot(wpilib.TimedRobot):
     def robotInit(self):
         """Initialize the robot."""
         print("Robot Initialized!")
         self.m_robotContainer = RobotContainer()
-        self.m_autonomousCommand = None
+        # self.m_autonomousCommand = None
 
     def robotPeriodic(self):
         """Run code that should execute regardless of the robot's mode."""
@@ -31,10 +32,10 @@ class Robot(wpilib.TimedRobot):
 
     def autonomousInit(self):
         """Run once when the robot enters Autonomous mode."""
-        self.m_autonomousCommand = self.m_robotContainer.get_autonomous_command()
-
-        if self.m_autonomousCommand is not None:
-            self.m_autonomousCommand.schedule()
+        # self.m_autonomousCommand = self.m_robotContainer.get_autonomous_command()
+        #
+        # if self.m_autonomousCommand is not None:
+        #     self.m_autonomousCommand.schedule()
 
     def autonomousPeriodic(self):
         """Run periodically during Autonomous mode."""
@@ -46,8 +47,8 @@ class Robot(wpilib.TimedRobot):
 
     def teleopInit(self):
         """Run once when the robot enters Teleoperated mode."""
-        if self.m_autonomousCommand is not None:
-            self.m_autonomousCommand.cancel()
+        # if self.m_autonomousCommand is not None:
+        #     self.m_autonomousCommand.cancel()
 
     def teleopPeriodic(self):
         """Run periodically during Teleoperated mode."""

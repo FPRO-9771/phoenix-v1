@@ -1,7 +1,6 @@
 # limelight_handler.py
 import limelight
 import limelightresults
-import time
 
 class LimelightHandler:
     def __init__(self, debug=True):

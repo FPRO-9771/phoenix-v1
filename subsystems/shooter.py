@@ -1,62 +1,104 @@
 from commands2 import SubsystemBase, Command
-from phoenix6.hardware import TalonFX
-from phoenix6.configs import TalonFXConfiguration, Slot0Configs
-from phoenix6.signals import NeutralModeValue
-from phoenix6.controls import VelocityVoltage
-from wpilib import XboxController
+from phoenix6.hardware import TalonFXS
+from phoenix6.configs import TalonFXSConfiguration, Slot0Configs
+from phoenix6.signals import NeutralModeValue, MotorArrangementValue
+from phoenix6.controls import VelocityVoltage, DutyCycleOut
 from typing import Callable
 from constants import MOTOR_IDS
+from wpilib import Timer
 
 class Shooter(SubsystemBase):
-    """
-    Shooter subsystem that controls a motor to launch PVC pipe sections.
-    Uses velocity control for consistent shooting power.
-    """
-    
+
     def __init__(self, max_rpm: float = 2000):
         """Initialize the shooter subsystem."""
         super().__init__()
         
         # Initialize motor
-        self.motor = TalonFX(MOTOR_IDS["shooter"])
+        self.motor = TalonFXS(MOTOR_IDS["shooter"])
         
         # Configure motor
-        configs = TalonFXConfiguration()
-        #
-        # # Velocity control configuration
-        # slot0 = Slot0Configs()
-        # slot0.k_p = 0.05    # Velocity control gains
-        # slot0.k_i = 0.0
-        # slot0.k_d = 0.0
-        # slot0.k_v = 0.12    # Feed forward gain
-        # configs.slot0 = slot0
-        #
-        # # Set motor to coast mode when stopped
-        # configs.motor_output.neutral_mode = NeutralModeValue.COAST
-        #
-        # # Apply configurations
-        # self.motor.configurator.apply(configs)
-        #
-        # # Constants
-        self.max_rpm = max_rpm
-        self.default_speed_percentage = 0.75  # 75% of max speed by default
-        #
-        # # Create velocity control request
-        self.velocity_request = VelocityVoltage(0)
-        #
-        # # Current state
-        self.is_running = False
-        
-    def set_speed_percentage(self, percentage: float):
-        """Set the shooter speed as a percentage of max RPM."""
-        self.default_speed_percentage = max(0.0, min(1.0, percentage))
+        configs = TalonFXSConfiguration()
 
-    def get_current_rpm(self) -> float:
-        """Get the current motor RPM."""
-        return self.motor.get_velocity().value * 60.0  # Convert RPS to RPM
+        configs.commutation.motor_arrangement = MotorArrangementValue.MINION_JST
+
+        # Velocity control configuration
+        slot0 = Slot0Configs()
+        slot0.k_p = 0.1    # Velocity control gains
+        slot0.k_i = 0.0
+        slot0.k_d = 0.0
+        slot0.k_v = 0.12    # Feed forward gain
+        configs.slot0 = slot0
+
+        # Set motor to coast mode when stopped
+        configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
+
+        # Apply configurations
+        self.motor.configurator.apply(configs)
+
+        self.max_rpm = max_rpm
+        self.velocity_request = VelocityVoltage(0)
+        self.is_running = False
+        # self.default_speed_percentage = 1  # 75% of max speed by default
+
+    # def set_speed_percentage(self, percentage: float):
+    #     """Set the shooter speed as a percentage of max RPM."""
+    #     self.default_speed_percentage = max(0.0, min(1.0, percentage))
+
+    # def get_current_rpm(self) -> float:
+    #     """Get the current motor RPM."""
+    #     return self.motor.get_velocity().value * 60.0  # Convert RPS to RPM
+
+    def shoot(self, strength: int, action = 'shoot', stop_condition: Callable[[], bool] = None) -> Command:
+
+        class ShooterShootCommand(Command):
+            def __init__(self, shooter, _strength, _action, _stop_condition):
+                super().__init__()
+                self.shooter = shooter
+                self.addRequirements(shooter)
+                self.timer = Timer()
+                self.voltage = 0
+                self.strength = _strength
+                self.action = _action
+                self.stop_condition = _stop_condition
+
+
+            def initialize(self):
+                print(f"///// SHOOTER SHOOT")
+                self.timer.reset()
+                self.timer.start()
+
+            def execute(self):
+
+                voltage = self.strength
+                if self.action == 'hold':
+                    voltage = voltage * -1
+                voltage = min(max(voltage, -2), 2) * -1
+                print(f"///// SHOOTER SHOOT V: {voltage}")
+
+                # Apply voltage to motor
+                self.shooter.motor.setVoltage(voltage)
+
+            def isFinished(self):
+                if self.action == "hold" and self.stop_condition and self.stop_condition():
+                    print(f"///// SHOOTER {self.action.upper()} STOPPING")
+                    return True
+
+                if self.action == "shoot":
+                    time_elapsed = self.timer.get()
+                    print(f"///// SHOOTER {self.action.upper()} TIMER: {time_elapsed:.2f}s")
+                    if time_elapsed >= 0.25:  # ✅ 'shoot' runs for 0.25 seconds
+                        print(f"///// SHOOTER {self.action.upper()} FINISHED")
+                        return True
+
+                return False
+
+            def end(self, interrupted):
+                    self.shooter.motor.setVoltage(0)
+                    self.timer.stop()
+
+        return ShooterShootCommand(self, strength, action, stop_condition)
 
     def manual(self, percentage_func: Callable[[], float]) -> Command:
-        """Create a command that continuously updates shooter speed based on a trigger input."""
 
         class ManualRunCommand(Command):
             def __init__(self, shooter, percentage_func: Callable[[], float]):
@@ -65,12 +107,11 @@ class Shooter(SubsystemBase):
                 self.percentage_func = percentage_func  # Store function instead of static value
                 self.addRequirements(shooter)
 
-            def initialize(self):
-                print("Shooter command started")
+            # def initialize(self):
 
             def execute(self):
                 percentage = self.percentage_func()  # Call function to get live trigger value
-                if abs(percentage) <= 0.05:  # Ignore small values
+                if abs(percentage) <= 0.1:  # Ignore small values
                     self.shooter.stop()
                     return
 
@@ -78,12 +119,9 @@ class Shooter(SubsystemBase):
                 self.shooter.velocity_request.velocity = target_rps
                 self.shooter.motor.set_control(self.shooter.velocity_request)
                 self.shooter.is_running = True
-                print(f"Shooter running at {percentage * 100:.1f}% speed (RPM: {target_rps * 60:.0f})")
 
             def end(self, interrupted):
-                print("Stopping shooter")
-                self.shooter.velocity_request.velocity = 0
-                self.shooter.motor.set_control(self.shooter.velocity_request)
+                self.shooter.motor.set_control(DutyCycleOut(0))
                 self.shooter.is_running = False
 
             def isFinished(self):
@@ -93,19 +131,11 @@ class Shooter(SubsystemBase):
 
     def stop(self):
         """Stop the shooter motor."""
-        self.velocity_request.velocity = 0
-        self.motor.set_control(self.velocity_request)
+        self.motor.set(0)
         self.is_running = False
 
-    def periodic(self):
-        """Periodic update function."""
-        if self.is_running:
-            current_rpm = self.get_current_rpm()
-            print(f"Shooter RPM: {current_rpm:.0f}")
-
-    def test_motor(self):
-        """Run the shooter motor at 25% power for testing."""
-        print("Testing Minion motor...")
-        from phoenix6.controls import DutyCycleOut
-
-        self.motor.set_control(DutyCycleOut(0.25))  # Set to 25% power
+    # def periodic(self):
+    #     """Periodic update function."""
+        # if self.is_running:
+        #     current_rpm = self.get_current_rpm()
+        #     print(f"Shooter RPM: {current_rpm:.0f}")
