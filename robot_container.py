@@ -1,6 +1,7 @@
 from wpilib.event import EventLoop
+from wpilib import SmartDashboard, SendableChooser
 
-from commands2 import InstantCommand
+from commands2 import Command, InstantCommand
 from commands2.button import Trigger
 from commands2.button import CommandXboxController
 from commands2.sysid import SysIdRoutine
@@ -18,7 +19,10 @@ from subsystems.elevator import Elevator
 from subsystems.shooter import Shooter
 from subsystems.auton import Auton
 
+from autonomous.auton import AutonBlueLeft, AutonBlueRight
+
 from handlers.limelight_handler import LimelightHandler
+
 
 
 class RobotContainer:
@@ -77,7 +81,14 @@ class RobotContainer:
 
         self.configure_bindings()
 
-        # self.shooter.test_motor()
+        # Auton functions
+        self.chooser = SendableChooser()
+
+        self.auto_blue_left = AutonBlueA()
+        self.auto_blue_right = AutonBlueB()
+
+        self.chooser.setDefaultOption("Auto Blue Left", self.auto_blue_left)
+        self.chooser.addOption("Auto Blue Right", self.auto_blue_right)
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""
@@ -200,15 +211,9 @@ class RobotContainer:
         self.speed_ratio = ratio
         self.rotation_ratio = min(1, ratio * 1.5)
 
-    # def get_autonomous_command(self) -> Command:
-    #     """Return the autonomous command."""
-    #     return RepeatCommand(
-    #         SequentialCommandGroup(
-    #             WaitCommand(10),
-    #             InstantCommand(self.rotate_drivetrain),
-    #             WaitCommand(1)
-    #         )
-    #     )
+    def get_autonomous_command(self) -> Command:
+        return self.chooser.getSelected()
+
     #
     # def rotate_drivetrain(self):
     #     """Helper method to rotate the drivetrain."""
