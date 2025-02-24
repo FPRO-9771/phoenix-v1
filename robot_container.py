@@ -1,5 +1,7 @@
 from wpilib.event import EventLoop
-from wpilib import SmartDashboard, SendableChooser
+from wpilib import SmartDashboard, SendableChooser, DriverStation
+
+from commands2 import InstantCommand
 
 from commands2 import Command, InstantCommand
 from commands2.button import Trigger
@@ -23,7 +25,9 @@ from autonomous.auton import AutonBlueLeft, AutonBlueRight
 
 from handlers.limelight_handler import LimelightHandler
 
-
+class DoNothingCommand(InstantCommand):
+    def __init__(self, drivetrain):
+        super().__init__(lambda: None, drivetrain)
 
 class RobotContainer:
 
@@ -84,11 +88,48 @@ class RobotContainer:
         # Auton functions
         self.chooser = SendableChooser()
 
-        self.auto_blue_left = AutonBlueA()
-        self.auto_blue_right = AutonBlueB()
+        # Autonomous command chooser
+        self.chooser = SendableChooser()
 
-        self.chooser.setDefaultOption("Auto Blue Left", self.auto_blue_left)
-        self.chooser.addOption("Auto Blue Right", self.auto_blue_right)
+        # Dictionary of available autonomous modes
+        self.modes = {
+            "Auto Blue Left": AutonBlueLeft(),
+            "Auto Blue Right": AutonBlueRight(self.drivetrain, self._max_speed, self._max_angular_rate, self.shooter),
+        }
+
+        default_modes = []
+        mode_names = []
+
+        print("Loaded autonomous modes:")
+        for k, v in sorted(self.modes.items()):
+            if getattr(v, "DEFAULT", False):
+                print(f" -> {k} [Default]")
+                self.chooser.setDefaultOption(k, v)
+                default_modes.append(k)
+            else:
+                print(f" -> {k}")
+                self.chooser.addOption(k, v)
+
+            mode_names.append(k)
+
+        if len(self.modes) == 0:
+            print("WARNING: No autonomous modes were loaded!")
+
+        self.chooser.addOption("None", None)
+
+        if len(default_modes) == 0:
+            self.chooser.setDefaultOption("None", None)
+        elif len(default_modes) != 1:
+            if not DriverStation.isFMSAttached():
+                raise RuntimeError(
+                    f"More than one autonomous mode was specified as default! (modes: {', '.join(default_modes)})")
+
+        # Put the chooser on the dashboard
+        SmartDashboard.putData("Autonomous Mode", self.chooser)
+
+        # Compatibility with older FRC dashboards
+
+        print("Autonomous switcher initialized")
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""
@@ -212,7 +253,8 @@ class RobotContainer:
         self.rotation_ratio = min(1, ratio * 1.5)
 
     def get_autonomous_command(self) -> Command:
-        return self.chooser.getSelected()
+        selected_command = self.chooser.getSelected()
+        return selected_command
 
     #
     # def rotate_drivetrain(self):
