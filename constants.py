@@ -3,7 +3,8 @@ MOTOR_IDS = {
     "elevator_right": 20,
     "elevator_left": 21,
     "wrist": 22,
-    "shooter": 25
+    "shooter": 25,
+    "climber": "unsure"
 }
 
 ELEVATOR_ROTATIONS = {
@@ -31,4 +32,15 @@ ARM_ROTATIONS = {
 SHOOTER_STRENGTH = {
     "low": 2,
     "high": 3
+}
+
+#thes are the calls I imagine we are going to need
+CLIMBER_ARM = {
+
+    "down": .2,
+    #Lock should be used to turn on the servo 'locking' the arm in place
+    "lock": True,
+    "unlock": False,
+    "up": 6,
+    "safery_retreat": 3
 }
