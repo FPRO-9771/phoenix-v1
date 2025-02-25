@@ -206,6 +206,9 @@ class RobotContainer:
             self.shooter.manual(lambda: ctrl.getHID().getRightTriggerAxis() * -1)
         )
 
+        ctrl.back().whileTrue(self.climber.manual(0.25))
+        ctrl.start().whileTrue(self.climber.manual(-0.25))
+
         # Default commands
         # self.arm.setDefaultCommand(self.arm.hold_position())
 
