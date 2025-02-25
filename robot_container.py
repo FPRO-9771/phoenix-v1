@@ -1,9 +1,7 @@
 from wpilib.event import EventLoop
 from wpilib import SmartDashboard, SendableChooser, DriverStation
 
-from commands2 import InstantCommand
-
-from commands2 import Command, InstantCommand
+from commands2 import Command, InstantCommand, CommandScheduler
 from commands2.button import Trigger
 from commands2.button import CommandXboxController
 from commands2.sysid import SysIdRoutine
@@ -11,7 +9,7 @@ from commands2.sysid import SysIdRoutine
 from phoenix6 import swerve, utils
 
 from wpimath.units import rotationsToRadians
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from wpimath.geometry import Rotation2d
 
 from telemetry import Telemetry
 from generated.tuner_constants import TunerConstants
@@ -19,15 +17,14 @@ from generated.tuner_constants import TunerConstants
 from subsystems.arm import Arm
 from subsystems.elevator import Elevator
 from subsystems.shooter import Shooter
-from subsystems.auton import Auton
 
-from autonomous.auton import AutonBlueLeft, AutonBlueRight
+from autonomous.auton_operator import AutonOperator
+
+from autonomous.auton_mode_selector import create_auton_chooser
 
 from handlers.limelight_handler import LimelightHandler
 
-class DoNothingCommand(InstantCommand):
-    def __init__(self, drivetrain):
-        super().__init__(lambda: None, drivetrain)
+
 
 class RobotContainer:
 
@@ -49,7 +46,7 @@ class RobotContainer:
         self.elevator = Elevator(1000)  # Use your actual CAN IDs
         self.arm = Arm(300)
         self.shooter = Shooter()
-        self.auton = Auton()
+        self.auton_operator = AutonOperator()
 
         # Setting up bindings for necessary control of the swerve drive platform
         self._drive = (
@@ -89,52 +86,17 @@ class RobotContainer:
         self.chooser = SendableChooser()
 
         # Autonomous command chooser
-        self.chooser = SendableChooser()
-
-        # Dictionary of available autonomous modes
-        self.modes = {
-            "Auto Blue Left": AutonBlueLeft(),
-            "Auto Blue Right": AutonBlueRight(self.drivetrain, self._max_speed, self._max_angular_rate, self.shooter),
-        }
-
-        default_modes = []
-        mode_names = []
-
-        print("Loaded autonomous modes:")
-        for k, v in sorted(self.modes.items()):
-            if getattr(v, "DEFAULT", False):
-                print(f" -> {k} [Default]")
-                self.chooser.setDefaultOption(k, v)
-                default_modes.append(k)
-            else:
-                print(f" -> {k}")
-                self.chooser.addOption(k, v)
-
-            mode_names.append(k)
-
-        if len(self.modes) == 0:
-            print("WARNING: No autonomous modes were loaded!")
-
-        self.chooser.addOption("None", None)
-
-        if len(default_modes) == 0:
-            self.chooser.setDefaultOption("None", None)
-        elif len(default_modes) != 1:
-            if not DriverStation.isFMSAttached():
-                raise RuntimeError(
-                    f"More than one autonomous mode was specified as default! (modes: {', '.join(default_modes)})")
-
-        # Put the chooser on the dashboard
-        SmartDashboard.putData("Autonomous Mode", self.chooser)
-
-        # Compatibility with older FRC dashboards
-
-        print("Autonomous switcher initialized")
+        self.chooser = create_auton_chooser(self.drivetrain, self._drive, self._max_angular_rate, self.shooter)
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""
         self.configure_driver_controls()
         self.configure_operator_controls()
+
+        #ToDo: This is just for testing on sim, delete later
+        # shooter_command = self.shooter.shoot(3, 'hold')
+        # CommandScheduler.getInstance().schedule(shooter_command)
+
 
     # def get_speed_multiplier(self):
     #     "returns the current speed multiplier"
@@ -221,10 +183,10 @@ class RobotContainer:
         ctrl = self.controller_operator
 
         # Automated controls
-        ctrl.a().onTrue(self.auton.shoot(2))
-        ctrl.x().onTrue(self.auton.shoot(3))
-        ctrl.y().onTrue(self.auton.shoot(4))
-        ctrl.b().onTrue(self.auton.intake())
+        ctrl.a().onTrue(self.auton_operator.shoot(2))
+        ctrl.x().onTrue(self.auton_operator.shoot(3))
+        ctrl.y().onTrue(self.auton_operator.shoot(4))
+        ctrl.b().onTrue(self.auton_operator.intake())
 
 
         # Manual controls with buttons
@@ -252,7 +214,7 @@ class RobotContainer:
         self.speed_ratio = ratio
         self.rotation_ratio = min(1, ratio * 1.5)
 
-    def get_autonomous_command(self) -> Command:
+    def get_autonomous_command(self):
         selected_command = self.chooser.getSelected()
         return selected_command
 

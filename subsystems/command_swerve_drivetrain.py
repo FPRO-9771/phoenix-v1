@@ -250,7 +250,6 @@ class CommandSwerveDrivetrain(Subsystem, swerve.SwerveDrivetrain):
         :returns: Command to run
         :rtype: Command
         """
-        print(f"***** Drivetrain Received Request: {request}")
 
         return self.run(lambda: self.set_control(request()))
 

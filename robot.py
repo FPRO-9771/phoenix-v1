@@ -5,9 +5,6 @@
 import wpilib
 from commands2 import CommandScheduler
 from robot_container import RobotContainer
-from robot_container import DoNothingCommand
-
-import time
 
 class Robot(wpilib.TimedRobot):
     def robotInit(self):
@@ -34,20 +31,19 @@ class Robot(wpilib.TimedRobot):
         pass
 
     def autonomousInit(self):
-        """Run once when the robot enters Autonomous mode."""
-        print("[DEBUG] Autonomous Mode Initialized")
+        print("##### AM I")
 
         self.m_autonomousCommand = self.m_robotContainer.get_autonomous_command()
+        print(f"##### AM C: {self.m_autonomousCommand}")
 
-        if self.m_autonomousCommand is not None:
-            print("[DEBUG] Scheduling autonomous command...")
-            self.m_autonomousCommand.schedule()
+        if self.m_autonomousCommand:
+            print("##### AM Sched")
+            CommandScheduler.getInstance().schedule(self.m_autonomousCommand)
         else:
-            print("[ERROR] No autonomous command to schedule!")
+            print("##### AM Sched ERR")
 
     def autonomousPeriodic(self):
-        """Run periodically during Autonomous mode."""
-        pass
+        CommandScheduler.getInstance().run()
 
     def autonomousExit(self):
         """Run once when the robot exits Autonomous mode."""
@@ -55,14 +51,14 @@ class Robot(wpilib.TimedRobot):
 
     def teleopInit(self):
         """Run once when the robot enters Teleoperated mode."""
-        print("[DEBUG] Teleop Mode Initialized")
+        print("##### TO I")
 
         # Ensure driver controls are set up in teleop mode only
         self.m_robotContainer.configure_bindings()
 
         # If an autonomous command was running, cancel it
         if hasattr(self, 'm_autonomousCommand') and self.m_autonomousCommand is not None:
-            print("[DEBUG] Cancelling autonomous command in teleop")
+            print("##### AM Cancel")
             self.m_autonomousCommand.cancel()
 
     def teleopPeriodic(self):
