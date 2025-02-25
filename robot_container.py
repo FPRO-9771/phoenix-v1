@@ -16,6 +16,7 @@ from generated.tuner_constants import TunerConstants
 from subsystems.arm import Arm
 from subsystems.elevator import Elevator
 from subsystems.shooter import Shooter
+from subsystems.climber import Climber
 from subsystems.auton import Auton
 
 from handlers.limelight_handler import LimelightHandler
@@ -41,6 +42,7 @@ class RobotContainer:
         self.elevator = Elevator(1000)  # Use your actual CAN IDs
         self.arm = Arm(300)
         self.shooter = Shooter()
+        self.climber = Climber()
         self.auton = Auton()
 
         # Setting up bindings for necessary control of the swerve drive platform

@@ -32,3 +32,13 @@ SHOOTER_STRENGTH = {
     "low": 2,
     "high": 3
 }
+
+CLIMBER_ROTATIONS = {
+
+     "down": .2,
+     #Lock should be used to turn on the servo 'locking' the arm in place
+     "lock": True,
+     "unlock": False,
+     "up": 6,
+     "safery_retreat": 3
+ }
