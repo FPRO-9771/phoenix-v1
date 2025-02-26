@@ -45,7 +45,7 @@ class Arm(SubsystemBase):
         print(f"///// ARM CP: {motor_position}")
         return motor_position
 
-    def at_target_position(self, target: float, tolerance: float = 0.2) -> bool:
+    def at_target_position(self, target: float, tolerance: float = 0.1) -> bool:
         motor_position = (self.get_current_position())
         print(f"///// ARM TP: {motor_position} / {target}")
         return abs(self.get_current_position() - target) <= tolerance
@@ -93,7 +93,7 @@ class Arm(SubsystemBase):
 
             def isFinished(self):
                 cp = self.arm.get_current_position()
-                return abs(cp - self.target_position) < 0.2
+                return abs(cp - self.target_position)
 
             def end(self, interrupted):
                 self.arm.motor.setVoltage(0)

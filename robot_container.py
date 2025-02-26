@@ -176,6 +176,8 @@ class RobotContainer:
         ctrl.y().onTrue(self.auton.shoot(4))
         ctrl.b().onTrue(self.auton.intake())
 
+        ctrl.back().whileTrue(self.climber.manual(lambda: 0.2))
+        ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
 
         # Manual controls with buttons
         Trigger(lambda: abs(ctrl.getHID().getLeftY()) > 0.1).whileTrue(
