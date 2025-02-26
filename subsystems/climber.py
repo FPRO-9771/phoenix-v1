@@ -6,7 +6,6 @@ from phoenix6.controls import VelocityVoltage
 from typing import Callable
 from constants import MOTOR_IDS, CLIMBER_ROTATIONS
 
-
 class Climber(SubsystemBase):
 
     def __init__(self, max_rpm: float = 2000):
@@ -39,6 +38,7 @@ class Climber(SubsystemBase):
 
         # Current target angle and state tracking
         self.is_holding_position = False
+
 
     def get_current_position(self) -> float:
         motor_position = self.motor.get_position().value * -1

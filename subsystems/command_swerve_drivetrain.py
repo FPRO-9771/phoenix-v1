@@ -9,10 +9,16 @@ from wpimath.geometry import Pose2d, Rotation2d
 
 
 class CommandSwerveDrivetrain(Subsystem, swerve.SwerveDrivetrain):
+
     """
     Class that extends the Phoenix 6 SwerveDrivetrain class and implements
     Subsystem so it can easily be used in command-based projects.
     """
+
+    class CommandSwerveDrivetrain(swerve.SwerveDrivetrain):
+        def apply_request(self, request):
+            print(f" - -  - - -  - - - -  - - - -  - -  - -[DEBUG] Drivetrain Applying Request: {request.__dict__}")  # Print details of request
+            super().apply_request(request)  # Call the original method to apply the request
 
     _SIM_LOOP_PERIOD: units.second = 0.005
 
@@ -244,6 +250,7 @@ class CommandSwerveDrivetrain(Subsystem, swerve.SwerveDrivetrain):
         :returns: Command to run
         :rtype: Command
         """
+
         return self.run(lambda: self.set_control(request()))
 
     def sys_id_quasistatic(self, direction: SysIdRoutine.Direction) -> Command:

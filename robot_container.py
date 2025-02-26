@@ -1,6 +1,7 @@
 from wpilib.event import EventLoop
+from wpilib import SmartDashboard, SendableChooser, DriverStation
 
-from commands2 import InstantCommand
+from commands2 import Command, InstantCommand, CommandScheduler
 from commands2.button import Trigger
 from commands2.button import CommandXboxController
 from commands2.sysid import SysIdRoutine
@@ -8,7 +9,7 @@ from commands2.sysid import SysIdRoutine
 from phoenix6 import swerve, utils
 
 from wpimath.units import rotationsToRadians
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from wpimath.geometry import Rotation2d
 
 from telemetry import Telemetry
 from generated.tuner_constants import TunerConstants
@@ -17,9 +18,13 @@ from subsystems.arm import Arm
 from subsystems.elevator import Elevator
 from subsystems.shooter import Shooter
 from subsystems.climber import Climber
-from subsystems.auton import Auton
+
+from autonomous.auton_operator import AutonOperator
+
+from autonomous.auton_mode_selector import create_auton_chooser
 
 from handlers.limelight_handler import LimelightHandler
+
 
 
 class RobotContainer:
@@ -43,7 +48,8 @@ class RobotContainer:
         self.arm = Arm(300)
         self.shooter = Shooter()
         self.climber = Climber()
-        self.auton = Auton()
+
+        self.auton_operator = AutonOperator()
 
         # Setting up bindings for necessary control of the swerve drive platform
         self._drive = (
@@ -79,12 +85,21 @@ class RobotContainer:
 
         self.configure_bindings()
 
-        # self.shooter.test_motor()
+        # Auton functions
+        self.chooser = SendableChooser()
+
+        # Autonomous command chooser
+        self.chooser = create_auton_chooser(self.drivetrain, self._drive, self._max_angular_rate, self.shooter)
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""
         self.configure_driver_controls()
         self.configure_operator_controls()
+
+        #ToDo: This is just for testing on sim, delete later
+        # shooter_command = self.shooter.shoot(3, 'hold')
+        # CommandScheduler.getInstance().schedule(shooter_command)
+
 
     # def get_speed_multiplier(self):
     #     "returns the current speed multiplier"
@@ -171,10 +186,10 @@ class RobotContainer:
         ctrl = self.controller_operator
 
         # Automated controls
-        ctrl.a().onTrue(self.auton.shoot(2))
-        ctrl.x().onTrue(self.auton.shoot(3))
-        ctrl.y().onTrue(self.auton.shoot(4))
-        ctrl.b().onTrue(self.auton.intake())
+        ctrl.a().onTrue(self.auton_operator.shoot(2))
+        ctrl.x().onTrue(self.auton_operator.shoot(3))
+        ctrl.y().onTrue(self.auton_operator.shoot(4))
+        ctrl.b().onTrue(self.auton_operator.intake())
 
         ctrl.back().whileTrue(self.climber.manual(lambda: 0.2))
         ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
@@ -196,6 +211,9 @@ class RobotContainer:
             self.shooter.manual(lambda: ctrl.getHID().getRightTriggerAxis() * -1)
         )
 
+        ctrl.back().whileTrue(self.climber.manual(0.25))
+        ctrl.start().whileTrue(self.climber.manual(-0.25))
+
         # Default commands
         # self.arm.setDefaultCommand(self.arm.hold_position())
 
@@ -204,15 +222,10 @@ class RobotContainer:
         self.speed_ratio = ratio
         self.rotation_ratio = min(1, ratio * 1.5)
 
-    # def get_autonomous_command(self) -> Command:
-    #     """Return the autonomous command."""
-    #     return RepeatCommand(
-    #         SequentialCommandGroup(
-    #             WaitCommand(10),
-    #             InstantCommand(self.rotate_drivetrain),
-    #             WaitCommand(1)
-    #         )
-    #     )
+    def get_autonomous_command(self):
+        selected_command = self.chooser.getSelected()
+        return selected_command
+
     #
     # def rotate_drivetrain(self):
     #     """Helper method to rotate the drivetrain."""

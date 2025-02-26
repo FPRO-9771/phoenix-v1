@@ -6,7 +6,7 @@ from subsystems.drive import Drive
 from constants import ELEVATOR_ROTATIONS, ARM_ROTATIONS, SHOOTER_STRENGTH
 
 
-class Auton(SubsystemBase):
+class AutonOperator(SubsystemBase):
     """
     Elevator subsystem that controls vertical movement using a TalonFX motor.
     Uses CANrange sensor for height measurement.

@@ -6,7 +6,6 @@ from phoenix6.controls import VelocityVoltage, PositionVoltage
 from typing import Callable
 from constants import MOTOR_IDS, ARM_ROTATIONS
 
-
 class Arm(SubsystemBase):
 
     def __init__(self, max_rpm: float = 2000):
@@ -109,8 +108,6 @@ class Arm(SubsystemBase):
                 self.percentage_func = percentage_func  # Store function instead of static value
                 self.addRequirements(arm)
                 self.ss = None
-
-            # def initialize(self):
 
             def execute(self):
                 percentage = self.percentage_func()  # Call function to get live trigger value
