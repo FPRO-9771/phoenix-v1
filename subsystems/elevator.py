@@ -4,7 +4,7 @@ from phoenix6.configs import TalonFXConfiguration, Slot0Configs
 from phoenix6.signals import NeutralModeValue
 from phoenix6.controls import VelocityVoltage, Follower
 from typing import Callable
-from constants import MOTOR_IDS, ELEVATOR_ROTATIONS, ARM_ROTATIONS
+from constants import MOTOR_IDS, CON_ELEV, CON_ARM
 
 
 class Elevator(SubsystemBase):
@@ -48,19 +48,19 @@ class Elevator(SubsystemBase):
         print(f"///// ELEV CP: {motor_position}")
         return motor_position
 
-    def at_target_position(self, target: float, tolerance: float = 0.2) -> bool:
+    def at_target_position(self, target: float, tolerance: float = CON_ELEV["target_position_tolerance"]) -> bool:
         motor_position = (self.get_current_position())
         print(f"///// ELEV TP: {motor_position} / {target}")
         return abs(self.get_current_position() - target) <= tolerance
 
-    def safety_stop(self):
+    def safety_stop(self, towards_min):
         cp = self.get_current_position()
 
-        if cp <= ELEVATOR_ROTATIONS["min"] + .5:
-            print(f"///// ELEV SS: min: {ELEVATOR_ROTATIONS["min"] + .5}")
+        if towards_min is True and cp <= CON_ELEV["min"] + CON_ELEV["min_max_tolerance"]:
+            print(f"///// ELEV SS: min: {CON_ELEV['min'] + CON_ELEV['min_max_tolerance']}")
             return "min"
-        if cp >= ELEVATOR_ROTATIONS["max"] - .5:
-            print(f"///// ELEV SS: max: {ELEVATOR_ROTATIONS["max"] - .5}")
+        if towards_min is False and cp >= CON_ELEV["max"] - CON_ELEV["min_max_tolerance"]:
+            print(f"///// ELEV SS: max: {CON_ELEV['max'] - CON_ELEV['min_max_tolerance']}")
             return "max"
 
         return None
@@ -71,7 +71,7 @@ class Elevator(SubsystemBase):
             def __init__(self, elevator, target_position):
                 super().__init__()
                 self.elevator = elevator
-                self.target_position = min(max(target_position, ELEVATOR_ROTATIONS["min"]), ELEVATOR_ROTATIONS["max"])
+                self.target_position = min(max(target_position, CON_ELEV["min"]), CON_ELEV["max"])
                 self.addRequirements(elevator)
 
             def initialize(self):
@@ -87,15 +87,14 @@ class Elevator(SubsystemBase):
                 voltage = error * kP
 
                 # Limit voltage for safety
-                voltage = min(max(voltage, -6), 6) * -1
-                print(f"///// ELEV GTP V: {voltage}")
+                voltage = min(max(voltage, - CON_ELEV["voltage_limit"]), CON_ELEV["voltage_limit"]) * -1
+                # print(f"///// ELEV GTP V: {voltage}")
 
                 # Apply voltage to motor
                 self.elevator.motor.setVoltage(voltage)
 
             def isFinished(self):
-                cp = self.elevator.get_current_position()
-                return abs(cp - self.target_position) < 0.2
+                return self.elevator.at_target_position(self.target_position)
 
             def end(self, interrupted):
                 self.elevator.motor.setVoltage(0)
@@ -116,12 +115,13 @@ class Elevator(SubsystemBase):
 
             def execute(self):
                 percentage = self.percentage_func()  # Call function to get live trigger value
+                print(f"///// ELEV Man P: {percentage}")
                 if abs(percentage) <= 0.1:  # Ignore small values
                     self.elevator.stop()
                     return
                 #
                 target_rps = (percentage * self.elevator.max_rpm) / 60.0
-                print(f"///// ELEV Man R: {target_rps}")
+                # print(f"///// ELEV Man R: {target_rps}")
                 self.elevator.velocity_request.velocity = target_rps
                 self.elevator.motor.set_control(self.elevator.velocity_request)
                 self.elevator.is_running = True
@@ -136,7 +136,7 @@ class Elevator(SubsystemBase):
                 else:
                     print(f"///// ARM Man End: SS")
                     cp = self.elevator.get_current_position()
-                    sr = ELEVATOR_ROTATIONS["safety_retreat"]
+                    sr = CON_ELEV["safety_retreat"]
 
                     if self.ss == "min":
                         self.elevator.go_to_position(cp + sr).schedule()
@@ -144,7 +144,8 @@ class Elevator(SubsystemBase):
                         self.elevator.go_to_position(cp - sr).schedule()
 
             def isFinished(self):
-                self.ss = self.elevator.safety_stop()
+                towards_min = self.percentage_func() > 0
+                self.ss = self.elevator.safety_stop(towards_min)
 
                 if self.ss is not None:
                     print(f"///// ELEV Man SS: {self.ss}")

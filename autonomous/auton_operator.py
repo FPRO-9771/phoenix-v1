@@ -1,12 +1,12 @@
-from commands2 import SubsystemBase, Command, SequentialCommandGroup, ParallelRaceGroup
+from commands2 import SubsystemBase, Command, SequentialCommandGroup, ParallelRaceGroup, ConditionalCommand, InstantCommand
 from subsystems.elevator import Elevator
 from subsystems.arm import Arm
 from subsystems.shooter import Shooter
 from subsystems.drive import Drive
-from constants import ELEVATOR_ROTATIONS, ARM_ROTATIONS, SHOOTER_STRENGTH
+from constants import CON_ELEV, CON_ARM, CON_SHOOT
 
 
-class Auton(SubsystemBase):
+class AutonOperator(SubsystemBase):
     """
     Elevator subsystem that controls vertical movement using a TalonFX motor.
     Uses CANrange sensor for height measurement.
@@ -25,26 +25,26 @@ class Auton(SubsystemBase):
                 self.arm = Arm()
                 self.shooter = Shooter()
 
-                arm_safe_pos = ARM_ROTATIONS["move"]
+                arm_safe_pos = CON_ARM["move"]
                 arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
-                hold_strength = SHOOTER_STRENGTH["low"]
+                hold_strength = CON_SHOOT["low"]
 
                 flip_angle = None
 
                 # Determine the correct height based on level
                 if level == 2:
-                    target_height = ELEVATOR_ROTATIONS["level_2"]
-                    target_angle = ARM_ROTATIONS["level_23"]
-                    shot_strength = SHOOTER_STRENGTH["high"]
+                    target_height = CON_ELEV["level_2"]
+                    target_angle = CON_ARM["level_23"]
+                    shot_strength = CON_SHOOT["high"]
                 elif level == 3:
-                    target_height = ELEVATOR_ROTATIONS["level_3"]
-                    target_angle = ARM_ROTATIONS["level_23"]
-                    shot_strength = SHOOTER_STRENGTH["high"]
+                    target_height = CON_ELEV["level_3"]
+                    target_angle = CON_ARM["level_23"]
+                    shot_strength = CON_SHOOT["high"]
                 elif level == 4:
-                    target_height = ELEVATOR_ROTATIONS["level_4"]
-                    target_angle = ARM_ROTATIONS["level_4"]
-                    shot_strength = SHOOTER_STRENGTH["high"]
-                    flip_angle = ARM_ROTATIONS["flip"]
+                    target_height = CON_ELEV["level_4"]
+                    target_angle = CON_ARM["level_4"]
+                    shot_strength = CON_SHOOT["low"]
+                    flip_angle = CON_ARM["flip"]
                 else:
                     print("Invalid input. Expected 2, 3, or 4.")
                     return
@@ -93,11 +93,11 @@ class Auton(SubsystemBase):
                 self.elevator = Elevator()
                 self.arm = Arm()
 
-                arm_safe_pos = ARM_ROTATIONS["move"]
+                arm_safe_pos = CON_ARM["move"]
                 arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
 
-                target_height = ELEVATOR_ROTATIONS["intake"]
-                target_angle = ARM_ROTATIONS["intake"]
+                target_height = CON_ELEV["intake"]
+                target_angle = CON_ARM["intake"]
 
                 # Create commands
                 elev_up_cmd = self.elevator.go_to_position(target_height)  # Move elevator

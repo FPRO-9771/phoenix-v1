@@ -3,32 +3,48 @@ MOTOR_IDS = {
     "elevator_right": 20,
     "elevator_left": 21,
     "wrist": 22,
-    "shooter": 25
+    "shooter": 25,
+    "climber": 26
 }
 
-ELEVATOR_ROTATIONS = {
+CON_ELEV = {
+    "min": 1.7,
+    "max": 116.5,
+    "min_max_tolerance": 0.5,
     "intake": 5.2,
-    "level_2": 20,
-    "level_3": 55,
-    "level_4": 107.5,
-    "min": 1,
-    "max": 111,
-    "safety_retreat": 2
+    "level_2": 22,
+    "level_3": 56,
+    "level_4": 115.5,
+    "target_position_tolerance": 0.3,
+    "safety_retreat": 1,
+    "voltage_limit": 6
 }
 
-ARM_ROTATIONS = {
+CON_ARM = {
     "min": 0,
     "max": 14,
+    "min_max_tolerance": 0.5,
     "move": 13,  # Safe position to move up and down
     "intake": 4.5,  # Angle for intake of coral
     "level_23": 8.6,  # Angle to deposit coral onto reef
-    "level_4": 7.9,  # angle for highest level
-    "flip": 6,  # angle for highest level
+    "level_4": 9.1,  # angle for highest level
+    "flip": 8,  # angle for highest level
+    "target_position_tolerance": 0.3,
     "elevator_danger": 5.75,  # angle where we should not be moving the elevator
-    "safety_retreat": 2
+    "safety_retreat": 2,
+    "voltage_limit": 2
 }
 
-SHOOTER_STRENGTH = {
+CON_SHOOT = {
     "low": 2,
-    "high": 3
+    "high": 3,
+    "shoot_duration": 0.3
 }
+
+CON_CLIMB = {
+     "down": .2,
+     "lock": True,
+     "unlock": False,
+     "up": 6,
+     "safety_retreat": 3
+ }

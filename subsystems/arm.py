@@ -4,8 +4,7 @@ from phoenix6.configs import TalonFXConfiguration, Slot0Configs
 from phoenix6.signals import NeutralModeValue
 from phoenix6.controls import VelocityVoltage, PositionVoltage
 from typing import Callable
-from constants import MOTOR_IDS, ARM_ROTATIONS
-
+from constants import MOTOR_IDS, CON_ARM
 
 class Arm(SubsystemBase):
 
@@ -45,19 +44,19 @@ class Arm(SubsystemBase):
         print(f"///// ARM CP: {motor_position}")
         return motor_position
 
-    def at_target_position(self, target: float, tolerance: float = 0.2) -> bool:
+    def at_target_position(self, target: float, tolerance: float = CON_ARM["target_position_tolerance"]) -> bool:
         motor_position = (self.get_current_position())
         print(f"///// ARM TP: {motor_position} / {target}")
         return abs(self.get_current_position() - target) <= tolerance
 
-    def safety_stop(self):
+    def safety_stop(self, towards_min):
         cp = self.get_current_position()
 
-        if cp <= ARM_ROTATIONS["min"] + .5:
-            print(f"///// ARM SS: min: {ARM_ROTATIONS["min"] + .5}")
+        if towards_min is True and cp <= CON_ARM["min"] + CON_ARM["min_max_tolerance"]:
+            print(f"///// ARM SS: min: {CON_ARM['min'] + CON_ARM['min_max_tolerance']}")
             return "min"
-        if cp >= ARM_ROTATIONS["max"] - .5:
-            print(f"///// ARM SS: max: {ARM_ROTATIONS["max"] - .5}")
+        if towards_min is False and cp >= CON_ARM["max"] - CON_ARM["min_max_tolerance"]:
+            print(f"///// ARM SS: max: {CON_ARM['max'] - CON_ARM['min_max_tolerance']}")
             return "max"
 
         return None
@@ -68,7 +67,7 @@ class Arm(SubsystemBase):
             def __init__(self, arm, target_position):
                 super().__init__()
                 self.arm = arm
-                self.target_position = min(max(target_position, ARM_ROTATIONS["min"]), ARM_ROTATIONS["max"])
+                self.target_position = min(max(target_position, CON_ARM["min"]), CON_ARM["max"])
                 self.addRequirements(arm)
 
             def initialize(self):
@@ -85,15 +84,14 @@ class Arm(SubsystemBase):
                 voltage = error * kP
 
                 # Limit voltage for safety
-                voltage = min(max(voltage, -2), 2) * -1
-                print(f"///// ARM GTP V: {voltage}")
+                voltage = min(max(voltage, -CON_ARM["voltage_limit"]), CON_ARM["voltage_limit"]) * -1
+                # print(f"///// ARM GTP V: {voltage}")
 
                 # Apply voltage to motor
                 self.arm.motor.setVoltage(voltage)
 
             def isFinished(self):
-                cp = self.arm.get_current_position()
-                return abs(cp - self.target_position) < 0.2
+                return self.arm.at_target_position(self.target_position)
 
             def end(self, interrupted):
                 self.arm.motor.setVoltage(0)
@@ -109,8 +107,6 @@ class Arm(SubsystemBase):
                 self.percentage_func = percentage_func  # Store function instead of static value
                 self.addRequirements(arm)
                 self.ss = None
-
-            # def initialize(self):
 
             def execute(self):
                 percentage = self.percentage_func()  # Call function to get live trigger value
@@ -135,7 +131,7 @@ class Arm(SubsystemBase):
                 else:
                     print(f"///// ARM Man End: SS")
                     cp = self.arm.get_current_position()
-                    sr = ARM_ROTATIONS["safety_retreat"]
+                    sr = CON_ARM["safety_retreat"]
 
                     if self.ss == "min":
                         self.arm.go_to_position(cp + sr).schedule()
@@ -143,7 +139,8 @@ class Arm(SubsystemBase):
                         self.arm.go_to_position(cp - sr).schedule()
 
             def isFinished(self):
-                self.ss = self.arm.safety_stop()
+                towards_min = self.percentage_func() > 0
+                self.ss = self.arm.safety_stop(towards_min)
 
                 if self.ss is not None:
                     print(f"///// ARM Man SS: {self.ss}")
