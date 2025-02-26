@@ -48,10 +48,10 @@ class Shooter(SubsystemBase):
     #     """Get the current motor RPM."""
     #     return self.motor.get_velocity().value * 60.0  # Convert RPS to RPM
 
-    def shoot(self, strength: int, action = 'shoot', stop_condition: Callable[[], bool] = None) -> Command:
+    def shoot(self, strength: int, action = 'shoot', stop_condition: Callable[[], bool] = None, duration = "shoot_duration") -> Command:
 
         class ShooterShootCommand(Command):
-            def __init__(self, shooter, _strength, _action, _stop_condition):
+            def __init__(self, shooter, _strength, _action, _stop_condition, _duration = "shoot_duration"):
                 super().__init__()
                 self.shooter = shooter
                 self.addRequirements(shooter)
@@ -60,6 +60,7 @@ class Shooter(SubsystemBase):
                 self.strength = _strength
                 self.action = _action
                 self.stop_condition = _stop_condition
+                self.duration_time = CON_SHOOT[_duration]
 
 
             def initialize(self):
@@ -86,7 +87,7 @@ class Shooter(SubsystemBase):
                 if self.action == "shoot":
                     time_elapsed = self.timer.get()
                     print(f"///// SHOOTER {self.action.upper()} TIMER: {time_elapsed:.2f}s")
-                    if time_elapsed >= CON_SHOOT["shoot_duration"]:  # ✅ 'shoot' runs for 0.25 seconds
+                    if time_elapsed >= self.duration_time:  # ✅ 'shoot' runs for 0.25 seconds
                         print(f"///// SHOOTER {self.action.upper()} FINISHED")
                         return True
 
@@ -96,7 +97,7 @@ class Shooter(SubsystemBase):
                     self.shooter.motor.setVoltage(0)
                     self.timer.stop()
 
-        return ShooterShootCommand(self, strength, action, stop_condition)
+        return ShooterShootCommand(self, strength, action, stop_condition, duration)
 
     def manual(self, percentage_func: Callable[[], float]) -> Command:
 

@@ -1,4 +1,4 @@
-from commands2 import SubsystemBase, Command, SequentialCommandGroup, ParallelRaceGroup, ConditionalCommand, InstantCommand
+from commands2 import SubsystemBase, Command, SequentialCommandGroup, ParallelRaceGroup, ConditionalCommand, InstantCommand, WaitCommand
 from subsystems.elevator import Elevator
 from subsystems.arm import Arm
 from subsystems.shooter import Shooter
@@ -113,21 +113,55 @@ class AutonOperator(SubsystemBase):
 
         return IntakeSequence()
 
-    def drive(self, drivetrain, drive, max_angular_rate) -> Command:
+    def auton_simple_1(self) -> Command:
 
-        class DriveTest(SequentialCommandGroup):
+        class AutonSimple1Sequence(ParallelRaceGroup):
             def __init__(self):
                 super().__init__()
 
-                print(f"Drive Test")
+                self.arm = Arm()
+                self.shooter = Shooter()
 
-                self.drive = Drive(drivetrain, drive, max_angular_rate)
+                arm_pos = CON_ARM["level_1"]
+                arm_rotate_cmd = self.arm.go_to_position(arm_pos)
+                hold_strength = CON_SHOOT["low"]
+
+                hold_piece_cmd = self.shooter.shoot(hold_strength, 'hold')
 
                 self.addCommands(
-                    self.drive
+                    arm_rotate_cmd,
+                    hold_piece_cmd
                 )
 
-        return DriveTest()
+        return AutonSimple1Sequence()
+
+    def auton_simple_2(self) -> Command:
+
+        class AutonSimple2Sequence(SequentialCommandGroup):
+            def __init__(self):
+                super().__init__()
+
+                self.elevator = Elevator()
+                self.arm = Arm()
+                self.shooter = Shooter()
+
+                arm_pos = CON_ARM["level_1"]
+                arm_rotate_cmd = self.arm.go_to_position(arm_pos)
+                flip_angle = CON_ARM["level_1_flip"]
+                arm_flip_cmd = self.arm.go_to_position(flip_angle)
+                shot_strength = CON_SHOOT["very_low"]
+
+                # Shoot piece
+                shoot_piece_cmd = self.shooter.shoot(shot_strength, 'shoot', None, "shoot_duration_long")
+
+                self.addCommands(
+                    arm_rotate_cmd,
+                    shoot_piece_cmd,
+                    WaitCommand(0.5),
+                    arm_flip_cmd
+                )
+
+        return AutonSimple2Sequence()
 
     # def drive(self, drivetrain, drive, max_angular_rate) -> Command:
     #
