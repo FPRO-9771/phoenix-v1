@@ -17,6 +17,7 @@ from generated.tuner_constants import TunerConstants
 from subsystems.arm import Arm
 from subsystems.elevator import Elevator
 from subsystems.shooter import Shooter
+from subsystems.climber import Climber
 
 from autonomous.auton_operator import AutonOperator
 
@@ -46,6 +47,8 @@ class RobotContainer:
         self.elevator = Elevator(1000)  # Use your actual CAN IDs
         self.arm = Arm(300)
         self.shooter = Shooter()
+        self.climber = Climber()
+
         self.auton_operator = AutonOperator()
 
         # Setting up bindings for necessary control of the swerve drive platform
@@ -188,6 +191,8 @@ class RobotContainer:
         ctrl.y().onTrue(self.auton_operator.shoot(4))
         ctrl.b().onTrue(self.auton_operator.intake())
 
+        ctrl.back().whileTrue(self.climber.manual(lambda: 0.2))
+        ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
 
         # Manual controls with buttons
         Trigger(lambda: abs(ctrl.getHID().getLeftY()) > 0.1).whileTrue(

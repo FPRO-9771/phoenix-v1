@@ -4,7 +4,7 @@ from phoenix6.configs import TalonFXSConfiguration, Slot0Configs
 from phoenix6.signals import NeutralModeValue, MotorArrangementValue
 from phoenix6.controls import VelocityVoltage, DutyCycleOut
 from typing import Callable
-from constants import MOTOR_IDS
+from constants import MOTOR_IDS, SHOOTER_STRENGTH
 from wpilib import Timer
 
 class Shooter(SubsystemBase):
@@ -86,7 +86,7 @@ class Shooter(SubsystemBase):
                 if self.action == "shoot":
                     time_elapsed = self.timer.get()
                     print(f"///// SHOOTER {self.action.upper()} TIMER: {time_elapsed:.2f}s")
-                    if time_elapsed >= 0.25:  # ✅ 'shoot' runs for 0.25 seconds
+                    if time_elapsed >= SHOOTER_STRENGTH["shoot_duration"]:  # ✅ 'shoot' runs for 0.25 seconds
                         print(f"///// SHOOTER {self.action.upper()} FINISHED")
                         return True
 

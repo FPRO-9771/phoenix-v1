@@ -48,19 +48,19 @@ class Elevator(SubsystemBase):
         print(f"///// ELEV CP: {motor_position}")
         return motor_position
 
-    def at_target_position(self, target: float, tolerance: float = 0.2) -> bool:
+    def at_target_position(self, target: float, tolerance: float = ELEVATOR_ROTATIONS["target_position_tolerance"]) -> bool:
         motor_position = (self.get_current_position())
         print(f"///// ELEV TP: {motor_position} / {target}")
         return abs(self.get_current_position() - target) <= tolerance
 
-    def safety_stop(self):
+    def safety_stop(self, direction_up):
         cp = self.get_current_position()
 
-        if cp <= ELEVATOR_ROTATIONS["min"] + .5:
-            print(f"///// ELEV SS: min: {ELEVATOR_ROTATIONS["min"] + .5}")
+        if direction_up is False and cp <= ELEVATOR_ROTATIONS["min"] + ELEVATOR_ROTATIONS["min_max_tolerance"]:
+            print(f"///// ELEV SS: min: {ELEVATOR_ROTATIONS['min'] + ELEVATOR_ROTATIONS['min_max_tolerance']}")
             return "min"
-        if cp >= ELEVATOR_ROTATIONS["max"] - .5:
-            print(f"///// ELEV SS: max: {ELEVATOR_ROTATIONS["max"] - .5}")
+        if direction_up is True and cp >= ELEVATOR_ROTATIONS["max"] - ELEVATOR_ROTATIONS["min_max_tolerance"]:
+            print(f"///// ELEV SS: max: {ELEVATOR_ROTATIONS['max'] - ELEVATOR_ROTATIONS['min_max_tolerance']}")
             return "max"
 
         return None
@@ -87,7 +87,7 @@ class Elevator(SubsystemBase):
                 voltage = error * kP
 
                 # Limit voltage for safety
-                voltage = min(max(voltage, -6), 6) * -1
+                voltage = min(max(voltage, - ELEVATOR_ROTATIONS["voltage_limit"]), ELEVATOR_ROTATIONS["voltage_limit"]) * -1
                 print(f"///// ELEV GTP V: {voltage}")
 
                 # Apply voltage to motor
@@ -95,7 +95,7 @@ class Elevator(SubsystemBase):
 
             def isFinished(self):
                 cp = self.elevator.get_current_position()
-                return abs(cp - self.target_position) < 0.2
+                return abs(cp - self.target_position)
 
             def end(self, interrupted):
                 self.elevator.motor.setVoltage(0)
@@ -116,12 +116,13 @@ class Elevator(SubsystemBase):
 
             def execute(self):
                 percentage = self.percentage_func()  # Call function to get live trigger value
+                print(f"///// ELEV Man P: {percentage}")
                 if abs(percentage) <= 0.1:  # Ignore small values
                     self.elevator.stop()
                     return
                 #
                 target_rps = (percentage * self.elevator.max_rpm) / 60.0
-                print(f"///// ELEV Man R: {target_rps}")
+                # print(f"///// ELEV Man R: {target_rps}")
                 self.elevator.velocity_request.velocity = target_rps
                 self.elevator.motor.set_control(self.elevator.velocity_request)
                 self.elevator.is_running = True
@@ -144,7 +145,8 @@ class Elevator(SubsystemBase):
                         self.elevator.go_to_position(cp - sr).schedule()
 
             def isFinished(self):
-                self.ss = self.elevator.safety_stop()
+                direction_up = self.percentage_func() < 0
+                self.ss = self.elevator.safety_stop(direction_up)
 
                 if self.ss is not None:
                     print(f"///// ELEV Man SS: {self.ss}")

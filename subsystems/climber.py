@@ -4,7 +4,7 @@ from commands2 import SubsystemBase, Command
 from phoenix6.signals import NeutralModeValue
 from phoenix6.controls import VelocityVoltage
 from typing import Callable
-from constants import MOTOR_IDS, CLIMBER_ARM
+from constants import MOTOR_IDS, CLIMBER_ROTATIONS
 
 class Climber(SubsystemBase):
 
@@ -39,73 +39,71 @@ class Climber(SubsystemBase):
         # Current target angle and state tracking
         self.is_holding_position = False
 
-        def get_current_position(self) -> float:
-            motor_position = self.motor.get_position().value * -1
-            print(f"///// CLIMBER CP: {motor_position}")
-            return motor_position
 
-        def at_target_position(self, target: float, tolerance: float = 0.2) -> bool:
-            motor_position = (self.get_current_position())
-            print(f"///// CLIMBER TP: {motor_position} / {target}")
-            return abs(self.get_current_position() - target) <= tolerance
+    def get_current_position(self) -> float:
+        motor_position = self.motor.get_position().value * -1
+        print(f"///// CLIMBER CP: {motor_position}")
+        return motor_position
 
-        def switch_survo(self) -> bool:
-            if self.motor.get_position().value == 0:
-                self.motor.set_position(1)
-                return True
-            else:
-                self.motor.set_position(0)
-                return False
+    def at_target_position(self, target: float, tolerance: float = 0.2) -> bool:
+        motor_position = (self.get_current_position())
+        print(f"///// CLIMBER TP: {motor_position} / {target}")
+        return abs(self.get_current_position() - target) <= tolerance
 
-        def safety_stop(self):
-            cp = self.get_current_position()
+    def switch_survo(self) -> bool:
+        if self.motor.get_position().value == 0:
+            self.motor.set_position(1)
+            return True
+        else:
+            self.motor.set_position(0)
+            return False
 
-            if cp <= CLIMBER_ARM["down"] + .3:
-                print(f"///// CLIMBER SS: min: {CLIMBER_ARM["down"] + .3}")
-                return "min"
-            if cp >= CLIMBER_ARM["up"] - .3:
-                print(f"///// CLIMBER SS: max: {CLIMBER_ARM["up"] - .3}")
-                return "max"
+    # def safety_stop(self):
+    #     cp = self.get_current_position()
+    #
+    #     if cp <= CLIMBER_ROTATIONS["down"] + .3:
+    #         print(f"///// CLIMBER SS: min: {CLIMBER_ROTATIONS["down"] + .3}")
+    #         return "min"
+    #     if cp >= CLIMBER_ROTATIONS["up"] - .3:
+    #         print(f"///// CLIMBER SS: max: {CLIMBER_ROTATIONS["up"] - .3}")
+    #         return "max"
+    #
+    #     return None
 
-            return None
-
-
-
-
-        # def go_to_position (self, position: float) -> Command:
-        #
-        #     class ClimberarmMoveCommand(Command):
-        #         def __init__(self, climberarm, target_position):
-        #             super().__init__()
-        #             self.climberarm = climberarm
-        #             self.target_position = min(max(target_position, CLIMBER_ARM["down"]), CLIMBER_ARM["up"])
-        #             self.addRequirements(climberarm)
-        #
-        #         def initialize(self):
-        #             print (f"///// CLIMBER GTP T: {self.target_position}")
-        #             self.climberarm.target_position = self.target_position
-        #
-        #         def execute(self):
-        #             cp = self.climberarm.get_current_position()
-        #             error = self.target_position - cp
-        #
-        #             # Simple proportional control
-        #             kP = 1  # Adjust this gain
-        #             voltage = error * kP
-        #
-        #             # Limit voltage for safety
-        #             voltage = min(max(voltage, -6), 6) * -1
-        #             print(f"///// CLIMBER GTP V: {voltage}")
-        #
-        #             # Apply voltage to motor
-        #             self.climberarm.motor.setVoltage(voltage)
-        #
-        #         def isFinished(self):
-        #             cp = self.climberarm.get_current_position()
-        #             return abs(cp - self.target_position) < 0.2
-        #         def end(self, interrupted):
-        #             self.climberarm.motor.setVoltage(0)
-        #     return ClimberarmMoveCommand(self, position)
+    # def go_to_position (self, position: float) -> Command:
+    #
+    #     class ClimberarmMoveCommand(Command):
+    #         def __init__(self, climberarm, target_position):
+    #             super().__init__()
+    #             self.climberarm = climberarm
+    #             self.target_position = min(max(target_position, CLIMBER_ARM["down"]), CLIMBER_ARM["up"])
+    #             self.addRequirements(climberarm)
+    #
+    #         def initialize(self):
+    #             print (f"///// CLIMBER GTP T: {self.target_position}")
+    #             self.climberarm.target_position = self.target_position
+    #
+    #         def execute(self):
+    #             cp = self.climberarm.get_current_position()
+    #             error = self.target_position - cp
+    #
+    #             # Simple proportional control
+    #             kP = 1  # Adjust this gain
+    #             voltage = error * kP
+    #
+    #             # Limit voltage for safety
+    #             voltage = min(max(voltage, -6), 6) * -1
+    #             print(f"///// CLIMBER GTP V: {voltage}")
+    #
+    #             # Apply voltage to motor
+    #             self.climberarm.motor.setVoltage(voltage)
+    #
+    #         def isFinished(self):
+    #             cp = self.climberarm.get_current_position()
+    #             return abs(cp - self.target_position) < 0.2
+    #         def end(self, interrupted):
+    #             self.climberarm.motor.setVoltage(0)
+    #     return ClimberarmMoveCommand(self, position)
 
     def manual(self, percentage_func: Callable[[], float]) -> Command:
 
@@ -113,8 +111,8 @@ class Climber(SubsystemBase):
             def __init__(self, climber, percentage_func: Callable[[], float]):
                 super().__init__()
                 self.climber = climber
-                self.addRequirements(climber)
                 self.percentage_func = percentage_func
+                self.addRequirements(climber)
                 self.ss = None
 
             def execute(self):
@@ -139,20 +137,21 @@ class Climber(SubsystemBase):
 
                 else:
                     print(f"///// CLIMBER Man End: SS")
-                    cp = self.climberarm.get_current_position()
-                    sr = CLIMBER_ARM["safety_retreat"]
+                    cp = self.climber.get_current_position()
+                    sr = CLIMBER_ROTATIONS["safety_retreat"]
 
                     if self.ss == "min":
-                        self.climberarm.go_to_position(cp + sr).schedule()
+                        self.climber.go_to_position(cp + sr).schedule()
                     if self.ss == "max":
-                        self.climberarm.go_to_position(cp - sr).schedule()
+                        self.climber.go_to_position(cp - sr).schedule()
 
             def isFinished(self):
-                self.ss = self.climberarm.safety_stop()
-
-                if self.ss is not None:
-                    print(f"///// CLIMBER Man SS: {self.ss}")
-                    return True
+                # self.ss = self.climber.safety_stop()
+                #
+                # if self.ss is not None:
+                #     print(f"///// CLIMBER Man SS: {self.ss}")
+                #     return True
+                return False
 
         return ManualRunCommand(self, percentage_func)
 
@@ -160,5 +159,5 @@ class Climber(SubsystemBase):
         """Stop the elevator motor."""
         self.motor.set(0)
         self.is_running = False
-        cp = self.climberarm.get_current_position()
+        cp = self.climber.get_current_position()
         self.motor.set_position(cp)
