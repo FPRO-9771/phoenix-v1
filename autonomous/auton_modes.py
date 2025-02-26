@@ -1,5 +1,5 @@
 from commands2 import Command, CommandScheduler, WaitCommand, SequentialCommandGroup, StartEndCommand, RunCommand, InstantCommand
-from constants import ELEVATOR_ROTATIONS, ARM_ROTATIONS, SHOOTER_STRENGTH
+from constants import CON_ELEV, CON_ARM, CON_SHOOT
 
 
 # from subsystems.shooter import Shooter
@@ -33,7 +33,7 @@ class AutonBlueRight(SequentialCommandGroup):
         # shoot_piece_cmd = shooter.shoot(2, 'shoot')
 
         super().__init__(
-            shooter.shoot(SHOOTER_STRENGTH["high"], 'shoot'),  # ✅ Start shooter
+            shooter.shoot(CON_SHOOT["high"], 'shoot'),  # ✅ Start shooter
             WaitCommand(1.0),
             drivetrain.apply_request(
                 lambda: (

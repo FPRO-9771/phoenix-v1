@@ -4,7 +4,7 @@ from commands2 import SubsystemBase, Command
 from phoenix6.signals import NeutralModeValue
 from phoenix6.controls import VelocityVoltage
 from typing import Callable
-from constants import MOTOR_IDS, CLIMBER_ROTATIONS
+from constants import MOTOR_IDS, CON_CLIMB
 
 class Climber(SubsystemBase):
 
@@ -61,11 +61,11 @@ class Climber(SubsystemBase):
     # def safety_stop(self):
     #     cp = self.get_current_position()
     #
-    #     if cp <= CLIMBER_ROTATIONS["down"] + .3:
-    #         print(f"///// CLIMBER SS: min: {CLIMBER_ROTATIONS["down"] + .3}")
+    #     if cp <= CON_CLIMB["down"] + .3:
+    #         print(f"///// CLIMBER SS: min: {CON_CLIMB["down"] + .3}")
     #         return "min"
-    #     if cp >= CLIMBER_ROTATIONS["up"] - .3:
-    #         print(f"///// CLIMBER SS: max: {CLIMBER_ROTATIONS["up"] - .3}")
+    #     if cp >= CON_CLIMB["up"] - .3:
+    #         print(f"///// CLIMBER SS: max: {CON_CLIMB["up"] - .3}")
     #         return "max"
     #
     #     return None
@@ -138,7 +138,7 @@ class Climber(SubsystemBase):
                 else:
                     print(f"///// CLIMBER Man End: SS")
                     cp = self.climber.get_current_position()
-                    sr = CLIMBER_ROTATIONS["safety_retreat"]
+                    sr = CON_CLIMB["safety_retreat"]
 
                     if self.ss == "min":
                         self.climber.go_to_position(cp + sr).schedule()

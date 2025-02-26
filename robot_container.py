@@ -185,6 +185,8 @@ class RobotContainer:
 
         ctrl = self.controller_operator
 
+        ctrl.rightBumper().onTrue(InstantCommand(lambda: CommandScheduler.getInstance().cancelAll()))
+
         # Automated controls
         ctrl.a().onTrue(self.auton_operator.shoot(2))
         ctrl.x().onTrue(self.auton_operator.shoot(3))
