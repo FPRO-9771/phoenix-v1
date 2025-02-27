@@ -29,36 +29,82 @@ class AutonBlueLeft(Command):
     def end(self, interrupted):
         print(f"***** AUTON ABL End")
 
-# SAVE!! THIS WORKS AND SPINS THE MOTORS!
-class AutonBlueRight(SequentialCommandGroup):
-    DEFAULT = True
 
-    def __init__(self, drivetrain, drive, max_angular_rate, auton_operator, elevator, arm, shooter):
+def create_blue_right_auto(drivetrain, drive, max_angular_rate, auton_operator, elevator, arm, shooter):
+    """Factory function that returns a new command group for blue right autonomous"""
 
-        super().__init__(
-            auton_operator.auton_simple_1(),
-            drivetrain.apply_request(
-                lambda: (
-                    drive
-                    .with_velocity_x(
-                        -0.7
-                    )
-                )
-            ).withTimeout(2),
-            drivetrain.apply_request(
-                lambda: (
-                    drive
-                    .with_velocity_x(
-                        0
-                    )
-                )
-            ).withTimeout(0),
-            WaitCommand(1.0),
-            auton_operator.auton_simple_2()
+    # Create a new command group with fresh command instances
+    commands = []
+
+    # Add your sequence of commands
+    commands.append(DriveForwardCommand(drivetrain, drive, -1, 1))
+    commands.append(WaitCommand(1.0))
+
+    return SequentialCommandGroup(*commands)
+
+
+# Create a separate command class for your drive movement
+class DriveForwardCommand(Command):
+    def __init__(self, drivetrain, drive, speed, timeout_seconds):
+        super().__init__()
+        self.drivetrain = drivetrain
+        self.drive = drive
+        self.speed = speed
+        self.timeout_seconds = timeout_seconds
+        self.addRequirements(drivetrain)
+
+        # Create the request command when initialized
+        self.request_command = None
+        self.timer = Timer()  # Use WPILib's Timer class
+
+    def initialize(self):
+        print(f"Starting drive forward at speed {self.speed}")
+
+        # Reset and start the timer
+        self.timer.reset()
+        self.timer.start()
+
+        # Create and schedule the request command
+        return self.drivetrain.apply_request(
+            lambda: (
+                self.drive
+                .with_velocity_x(self.speed)
+            )
         )
 
+
+
+    def execute(self):
+        # The request_command is handling the motor control
+        # Add debug printing for the timer
+        if self.timer.hasElapsed(0.5):  # Print every half second
+            print(f"Timer: {self.timer.get()} / {self.timeout_seconds}")
+
     def end(self, interrupted):
-        print(f"***** AUTON ABR End")
+        print(f"Drive command ended, interrupted: {interrupted}")
+
+        # Stop the timer
+        self.timer.stop()
+
+        # Cancel the request command
+        if self.request_command is not None:
+            self.request_command.cancel()
+
+        # Create and schedule a stop command
+        stop_command = self.drivetrain.apply_request(
+            lambda: (
+                self.drive
+                .with_velocity_x(0)
+            )
+        )
+        stop_command.schedule()
+
+    def isFinished(self):
+        # Check if timeout has elapsed using the WPILib Timer
+        finished = self.timer.hasElapsed(self.timeout_seconds)
+        if finished:
+            print(f"Command timed out after {self.timer.get()} seconds")
+        return finished
 
 # # SAVE!! THIS WORKS AND SPINS THE MOTORS!
 # class AutonBlueRight(SequentialCommandGroup):

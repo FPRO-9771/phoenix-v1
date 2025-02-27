@@ -31,16 +31,13 @@ class Robot(wpilib.TimedRobot):
         pass
 
     def autonomousInit(self):
-        print("##### AM I")
+        # Get the selected autonomous command factory function
+        auto_command_factory = self.m_robotContainer.get_autonomous_command()
 
-        self.m_autonomousCommand = self.m_robotContainer.get_autonomous_command()
-        print(f"##### AM C: {self.m_autonomousCommand}")
-
-        if self.m_autonomousCommand:
-            print("##### AM Sched")
-            CommandScheduler.getInstance().schedule(self.m_autonomousCommand)
-        else:
-            print("##### AM Sched ERR")
+        # Create a fresh command instance and schedule it
+        if auto_command_factory is not None:
+            self.autonomousCommand = auto_command_factory()
+            self.autonomousCommand.schedule()
 
     def autonomousPeriodic(self):
         CommandScheduler.getInstance().run()
