@@ -11,13 +11,13 @@ CON_ELEV = {
     "min": 1.7,
     "max": 116.5,
     "min_max_tolerance": 0.5,
-    "intake": 5.2,
+    "intake": 11.47,
     "level_2": 22,
     "level_3": 56,
-    "level_4": 115.5,
+    "level_4": 117,
     "target_position_tolerance": 0.3,
     "safety_retreat": 1,
-    "voltage_limit": 6
+    "voltage_limit": 9
 }
 
 CON_ARM = {
@@ -27,7 +27,7 @@ CON_ARM = {
     "move": 13,  # Safe position to move up and down
     "intake": 4.5,  # Angle for intake of coral
     "level_23": 8.6,  # Angle to deposit coral onto reef
-    "level_4": 9.1,  # angle for highest level
+    "level_4": 9.3,  # angle for highest level, higher is steeper
     "flip": 8,  # angle for highest level
     "target_position_tolerance": 0.3,
     "elevator_danger": 5.75,  # angle where we should not be moving the elevator
