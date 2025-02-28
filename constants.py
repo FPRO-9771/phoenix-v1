@@ -26,6 +26,8 @@ CON_ARM = {
     "min_max_tolerance": 0.5,
     "move": 13,  # Safe position to move up and down
     "intake": 4.5,  # Angle for intake of coral
+    "level_1": 9,  # Angle to deposit coral onto reef
+    "level_1_flip": 5,
     "level_23": 8.6,  # Angle to deposit coral onto reef
     "level_4": 9.3,  # angle for highest level, higher is steeper
     "flip": 8,  # angle for highest level
@@ -36,8 +38,10 @@ CON_ARM = {
 }
 
 CON_SHOOT = {
+    "very_low": 0.8,
     "low": 2,
     "high": 3,
+    "shoot_duration_long": 1,
     "shoot_duration": 0.3
 }
 
