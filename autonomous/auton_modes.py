@@ -10,6 +10,7 @@ from wpilib import Timer
 # from subsystems.shooter import Shooter
 
 class Leave(SequentialCommandGroup):
+    DEFAULT = True
 
     def __init__(self, drivetrain, drive):
 
@@ -99,7 +100,6 @@ class ShootLeft(SequentialCommandGroup):
         print(f"***** AUTON SHOOT Left End")
 
 class ShootRight(SequentialCommandGroup):
-    DEFAULT = True
 
     def __init__(self, drivetrain, drive, auton_operator):
 

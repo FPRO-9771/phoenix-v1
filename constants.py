@@ -46,9 +46,8 @@ CON_SHOOT = {
 }
 
 CON_CLIMB = {
-     "down": .2,
-     "lock": True,
-     "unlock": False,
-     "up": 6,
-     "safety_retreat": 3
- }
+    "min": 0,
+    "min_max_tolerance": 1,
+    "safety_retreat": 1,
+    "power_ratio": 1
+}
