@@ -89,7 +89,7 @@ class RobotContainer:
         self.chooser = SendableChooser()
 
         # Autonomous command chooser
-        self.chooser = create_auton_chooser(self.drivetrain, self._drive, self._max_angular_rate, self.auton_operator, self.elevator, self.arm, self.shooter)
+        self.chooser = create_auton_chooser(self.drivetrain, self._drive, self.auton_operator)
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""

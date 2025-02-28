@@ -3,14 +3,28 @@ GENERAL = {
 }
 
 INSTRUCTIONS = {
-    "blue_left": {
-        "source_at_id": 2,
-        "reef_1_at_id": 11,
-        "reef_2_at_id": 10
+    "left": {
+        "drive1_v_x": -0.7,
+        "drive1_timeout": 2,
+        "driveRotate_rate": 1.5,
+        "driveRotate_timeout": 0.5,
+        "drive2_v_x": -0.7,
+        "drive2_timeout": 2,
     },
-    "blue_right": {
-        "source_at_id": 1,
-        "reef_1_at_id": 7,
-        "reef_2_at_id": 8
-    }
+    "right": {
+        "drive1_v_x": -0.7,
+        "drive1_timeout": 2,
+        "driveRotate_rate": -1.5,
+        "driveRotate_timeout": 0.5,
+        "drive2_v_x": -0.7,
+        "drive2_timeout": 2,
+    },
+    "center": {
+        "drive1_v_x": -0.7,
+        "drive1_timeout": 2,
+    },
+    "leave": {
+        "drive1_v_x": -0.7,
+        "drive1_timeout": 1,
+    },
 }
