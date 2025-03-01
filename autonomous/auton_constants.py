@@ -3,28 +3,18 @@ GENERAL = {
 }
 
 INSTRUCTIONS = {
-    "left": {
+    "shoot_sides": {
         "drive1_v_x": -0.7,
-        "drive1_timeout": 2,
-        "driveRotate_rate": 1.5,
-        "driveRotate_timeout": 0.5,
-        "drive2_v_x": -0.7,
-        "drive2_timeout": 2,
+        "drive1_timeout": 8
     },
-    "right": {
+    "shoot_center": {
         "drive1_v_x": -0.7,
-        "drive1_timeout": 2,
-        "driveRotate_rate": -1.5,
-        "driveRotate_timeout": 0.5,
-        "drive2_v_x": -0.7,
-        "drive2_timeout": 2,
-    },
-    "center": {
-        "drive1_v_x": -0.7,
-        "drive1_timeout": 2,
+        "drive1_timeout": 4.2,
+        "drive2_v_y": -0.7,
+        "drive2_timeout": 0.5,
     },
     "leave": {
         "drive1_v_x": -0.7,
-        "drive1_timeout": 1,
-    },
+        "drive1_timeout":3.5,
+    }
 }

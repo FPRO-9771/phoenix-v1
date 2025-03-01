@@ -1,13 +1,12 @@
-from autonomous.auton_modes import Leave, ShootLeft, ShootRight, ShootCenter
+from autonomous.auton_modes import (Leave, ShootCenter, ShootSides)
 from wpilib import SendableChooser
 
 def create_auton_chooser(drivetrain, drive, auton_operator):
     chooser = SendableChooser()
     modes = {
         "Leave": Leave(drivetrain, drive),
-        "Left": ShootLeft(drivetrain, drive, auton_operator),
-        "Right": ShootRight(drivetrain, drive, auton_operator),
-        "Center": ShootCenter(drivetrain, drive, auton_operator),
+        "Shoot Center": ShootCenter(drivetrain, drive, auton_operator),
+        "Shoot Sides": ShootSides(drivetrain, drive, auton_operator)
     }
 
     default_modes = []
