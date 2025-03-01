@@ -79,7 +79,7 @@ class ShootCenter(SequentialCommandGroup):
         super().__init__(
             drivetrain.seed_field_centric(),
             WaitCommand(0.5),
-            # auton_operator.auton_simple_1(),
+            auton_operator.auton_simple_1(),
             drivetrain.apply_request(
                 lambda: (
                     drive
