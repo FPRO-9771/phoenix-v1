@@ -26,15 +26,6 @@ class AutonOperator(SubsystemBase):
                 self.arm = arm
                 self.shooter = shooter
 
-                cancel_commands = ParallelCommandGroup(
-                    InstantCommand(lambda: elevator.getCurrentCommand().cancel()
-                    if elevator.getCurrentCommand() is not None else None),
-                    InstantCommand(lambda: arm.getCurrentCommand().cancel()
-                    if arm.getCurrentCommand() is not None else None),
-                    InstantCommand(lambda: shooter.getCurrentCommand().cancel()
-                    if shooter.getCurrentCommand() is not None else None)
-                )
-
                 arm_safe_pos = CON_ARM["move"]
                 arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
                 hold_strength = CON_SHOOT["low"]
@@ -81,7 +72,6 @@ class AutonOperator(SubsystemBase):
                 )
 
                 full_cmd_set = [
-                    cancel_commands,
                     move_elevator_and_arm,
                     shoot_piece_cmd
                 ]
