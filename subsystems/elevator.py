@@ -9,7 +9,7 @@ from constants import MOTOR_IDS, CON_ELEV, CON_ARM
 
 class Elevator(SubsystemBase):
 
-    def __init__(self, max_rpm: float = 2000):
+    def __init__(self):
         super().__init__()
 
         # Initialize motor
@@ -36,7 +36,6 @@ class Elevator(SubsystemBase):
         # Apply motor configurations
         self.motor.configurator.apply(motor_configs)
 
-        self.max_rpm = max_rpm
         self.velocity_request = VelocityVoltage(0)
         self.is_running = False
 
@@ -101,13 +100,14 @@ class Elevator(SubsystemBase):
 
         return ElevatorMoveCommand(self, position)
 
-    def manual(self, percentage_func: Callable[[], float]) -> Command:
+    def manual(self, percentage_func: Callable[[], float], max_rpm: float = 1000) -> Command:
 
         class ManualRunCommand(Command):
             def __init__(self, elevator, percentage_func: Callable[[], float]):
                 super().__init__()
                 self.elevator = elevator
                 self.percentage_func = percentage_func  # Store function instead of static value
+                self.max_rpm = max_rpm
                 self.addRequirements(elevator)
                 self.ss = None
 
@@ -120,7 +120,7 @@ class Elevator(SubsystemBase):
                     self.elevator.stop()
                     return
                 #
-                target_rps = (percentage * self.elevator.max_rpm) / 60.0
+                target_rps = (percentage * self.max_rpm) / 60.0
                 # print(f"///// ELEV Man R: {target_rps}")
                 self.elevator.velocity_request.velocity = target_rps
                 self.elevator.motor.set_control(self.elevator.velocity_request)

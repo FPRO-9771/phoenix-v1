@@ -20,11 +20,11 @@ from subsystems.shooter import Shooter
 from subsystems.climber import Climber
 
 from autonomous.auton_operator import AutonOperator
+from autonomous.auton_drive import AutonDrive
 
 from autonomous.auton_mode_selector import create_auton_chooser
 
 from handlers.limelight_handler import LimelightHandler
-
 
 
 class RobotContainer:
@@ -44,12 +44,10 @@ class RobotContainer:
 
         # Initialize subsystems
         self.limelight_handler = LimelightHandler(debug=True)
-        self.elevator = Elevator(1000)
-        self.arm = Arm(300)
+        self.elevator = Elevator()
+        self.arm = Arm()
         self.shooter = Shooter()
         self.climber = Climber()
-
-        self.auton_operator = AutonOperator()
 
         # Setting up bindings for necessary control of the swerve drive platform
         self._drive = (
@@ -57,10 +55,10 @@ class RobotContainer:
             .with_deadband(self._max_speed * 0.1)
             .with_rotational_deadband(
                 self._max_angular_rate * 0.1
-            )  # Add a 10% deadband
+            )
             .with_drive_request_type(
                 swerve.SwerveModule.DriveRequestType.OPEN_LOOP_VOLTAGE
-            )  # Use open-loop control for drive motors
+            )
         )
         self._brake = swerve.requests.SwerveDriveBrake()
         self._point = swerve.requests.PointWheelsAt()
@@ -69,6 +67,16 @@ class RobotContainer:
 
         self.drivetrain = TunerConstants.create_drivetrain()
 
+        # Initiate command schedule functions for autonomous tasks
+        self.auton_operator = AutonOperator(self.elevator, self.arm, self.shooter, self.climber)
+        self.auton_drive = AutonDrive(self.drivetrain, self._drive, self._max_speed, self._max_angular_rate,
+                                      self.limelight_handler)
+
+        # Set up auton functions and dashboard selection
+        self.chooser = SendableChooser()
+        self.chooser = create_auton_chooser(self.auton_drive, self.auton_operator)
+
+    def setup_teleop(self):
         # Telemetry
         self.event_loop = EventLoop()
 
@@ -76,33 +84,15 @@ class RobotContainer:
         self.speed_ratio = 1
         self.rotation_ratio = 1
 
-        # If in simulation, seed_field_centric position
-        if utils.is_simulation():
-            self.drivetrain.seed_field_centric()
-
         # Register telemetry
         self.drivetrain.register_telemetry(self._logger.telemeterize)
 
         self.configure_bindings()
 
-        # Auton functions
-        self.chooser = SendableChooser()
-
-        # Autonomous command chooser
-        self.chooser = create_auton_chooser(self.drivetrain, self._drive, self.auton_operator)
-
     def configure_bindings(self):
         """Configure button-to-command mappings."""
         self.configure_driver_controls()
         self.configure_operator_controls()
-
-        #ToDo: This is just for testing on sim, delete later
-        # shooter_command = self.shooter.shoot(3, 'hold')
-        # CommandScheduler.getInstance().schedule(shooter_command)
-
-
-    # def get_speed_multiplier(self):
-    #     "returns the current speed multiplier"
 
     def configure_driver_controls(self):
         """Configure driver controller bindings (driving and vision)."""
@@ -168,18 +158,6 @@ class RobotContainer:
             InstantCommand(lambda: self.set_speed_ratio(1))
         )
 
-        # trying to do some autonomy
-        # ctrl.y().onTrue(
-        #     # self.drivetrain.apply_request(
-        #     #     lambda: self._drive.with_velocity_y(-3)  # Adjust speed if needed
-        #     # )
-        #     self.auton.drive(self.drivetrain, self._drive, self._max_angular_rate)
-        # )
-        #
-        # ctrl.y().onFalse(
-        #     self.drivetrain.apply_request(lambda: self._drive.with_rotational_rate(0))
-        # )
-
     def configure_operator_controls(self):
         """Configure operator controller bindings (mechanisms)."""
 
@@ -227,9 +205,3 @@ class RobotContainer:
     def get_autonomous_command(self):
         selected_command = self.chooser.getSelected()
         return selected_command
-
-    #
-    # def rotate_drivetrain(self):
-    #     """Helper method to rotate the drivetrain."""
-    #     rotation_request = self.drive.with_rotational_rate(.5 * self.max_angular_rate)
-    #     self.drivetrain.apply_request(rotation_request)
