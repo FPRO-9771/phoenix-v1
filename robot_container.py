@@ -44,7 +44,7 @@ class RobotContainer:
 
         # Initialize subsystems
         self.limelight_handler = LimelightHandler(debug=True)
-        self.elevator = Elevator(1000)  # Use your actual CAN IDs
+        self.elevator = Elevator(1000)
         self.arm = Arm(300)
         self.shooter = Shooter()
         self.climber = Climber()
@@ -89,7 +89,7 @@ class RobotContainer:
         self.chooser = SendableChooser()
 
         # Autonomous command chooser
-        self.chooser = create_auton_chooser(self.drivetrain, self._drive, self._max_angular_rate, self.shooter)
+        self.chooser = create_auton_chooser(self.drivetrain, self._drive, self.auton_operator)
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""
@@ -162,7 +162,7 @@ class RobotContainer:
 
         # slow mode with buttons
         ctrl.rightBumper().onTrue(
-            InstantCommand(lambda: self.set_speed_ratio(0.2))
+            InstantCommand(lambda: self.set_speed_ratio(0.1))
         )
         ctrl.rightBumper().onFalse(
             InstantCommand(lambda: self.set_speed_ratio(1))

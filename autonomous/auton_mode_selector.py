@@ -1,11 +1,14 @@
-from autonomous.auton_modes import AutonBlueLeft, AutonBlueRight  # Import your autonomous mode classes
-from wpilib import SendableChooser  # Assuming you're using WPILib's SendableChooser
+from autonomous.auton_modes import (LeaveRed, LeaveBlue, ShootCenterRed, ShootCenterBlue, ShootSides)
+from wpilib import SendableChooser
 
-def create_auton_chooser(drivetrain, drive, max_angular_rate, shooter):
+def create_auton_chooser(drivetrain, drive, auton_operator):
     chooser = SendableChooser()
     modes = {
-        "Auto Blue Left": AutonBlueLeft(),
-        "Auto Blue Right": AutonBlueRight(drivetrain, drive, max_angular_rate, shooter),
+        "Leave Red": LeaveRed(drivetrain, drive),
+        "LeaveBlue": LeaveBlue(drivetrain, drive),
+        "Shoot Center Red": ShootCenterRed(drivetrain, drive, auton_operator),
+        "Shoot Center Blue": ShootCenterBlue(drivetrain, drive, auton_operator),
+        "Shoot Sides": ShootSides(drivetrain, drive, auton_operator)
     }
 
     default_modes = []
