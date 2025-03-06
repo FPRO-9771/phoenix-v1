@@ -1,7 +1,7 @@
 from wpilib.event import EventLoop
 from wpilib import SmartDashboard, SendableChooser, DriverStation
 
-from commands2 import Command, InstantCommand, CommandScheduler
+from commands2 import Command, InstantCommand, CommandScheduler, SequentialCommandGroup
 from commands2.button import Trigger
 from commands2.button import CommandXboxController
 from commands2.sysid import SysIdRoutine
@@ -161,16 +161,27 @@ class RobotContainer:
     def configure_operator_controls(self):
         """Configure operator controller bindings (mechanisms)."""
 
+        def cancel_and_run(command):
+            return SequentialCommandGroup(
+                InstantCommand(
+                    lambda: self.elevator.getCurrentCommand().cancel() if self.elevator.getCurrentCommand() else None),
+                InstantCommand(lambda: self.arm.getCurrentCommand().cancel() if self.arm.getCurrentCommand() else None),
+                InstantCommand(
+                    lambda: self.shooter.getCurrentCommand().cancel() if self.shooter.getCurrentCommand() else None),
+                command
+            )
+
         ctrl = self.controller_operator
 
         ctrl.rightBumper().onTrue(InstantCommand(lambda: CommandScheduler.getInstance().cancelAll()))
 
-        # Automated controls
-        ctrl.a().onTrue(self.auton_operator.shoot(2))
-        ctrl.x().onTrue(self.auton_operator.shoot(3))
-        ctrl.y().onTrue(self.auton_operator.shoot(4))
-        ctrl.b().onTrue(self.auton_operator.intake())
+        ctrl.leftBumper().onTrue(cancel_and_run(self.auton_operator.hard_hold()))
 
+        # Automated controls with pre-cancellation
+        ctrl.a().onTrue(cancel_and_run(self.auton_operator.shoot(2)))
+        ctrl.x().onTrue(cancel_and_run(self.auton_operator.shoot(3)))
+        ctrl.y().onTrue(cancel_and_run(self.auton_operator.shoot(4)))
+        ctrl.b().onTrue(cancel_and_run(self.auton_operator.intake()))
         ctrl.back().whileTrue(self.climber.manual(lambda: 0.2))
         ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
 

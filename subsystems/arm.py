@@ -60,13 +60,14 @@ class Arm(SubsystemBase):
 
         return None
 
-    def go_to_position(self, position: float) -> Command:
+    def go_to_position(self, position: float, kp = 1) -> Command:
 
         class ArmMoveCommand(Command):
-            def __init__(self, arm, target_position):
+            def __init__(self, arm, target_position, _kp):
                 super().__init__()
                 self.arm = arm
                 self.target_position = min(max(target_position, CON_ARM["min"]), CON_ARM["max"])
+                self.kP = max(_kp, 1)
                 self.addRequirements(arm)
 
             def initialize(self):
@@ -79,8 +80,7 @@ class Arm(SubsystemBase):
                 error = self.target_position - cp
 
                 # Simple proportional control
-                kP = 1  # Adjust this gain
-                voltage = error * kP
+                voltage = error * self.kP
 
                 # Limit voltage for safety
                 voltage = min(max(voltage, -CON_ARM["voltage_limit"]), CON_ARM["voltage_limit"]) * -1
@@ -93,9 +93,11 @@ class Arm(SubsystemBase):
                 return self.arm.at_target_position(self.target_position)
 
             def end(self, interrupted):
+                if interrupted:
+                    print(f"///// ARM GTP T: {self.target_position} --CANCEL--")
                 self.arm.motor.setVoltage(0)
 
-        return ArmMoveCommand(self, position)
+        return ArmMoveCommand(self, position, kp)
 
     def manual(self, percentage_func: Callable[[], float], max_rpm: float = 300) -> Command:
 

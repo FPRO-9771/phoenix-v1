@@ -17,6 +17,7 @@ class AutonOperator(SubsystemBase):
 
         class ShootSequence(SequentialCommandGroup):
             def __init__(self, level, elevator, arm, shooter):
+                print(f"***** AUTON OP SHOOT: {level}")
                 super().__init__()
 
                 # Cancel any commands currently scheduled for these subsystems
@@ -103,7 +104,6 @@ class AutonOperator(SubsystemBase):
                 # Create commands
                 elev_up_cmd = self.elevator.go_to_position(target_height)  # Move elevator
                 arm_rotate_receive_cmd = self.arm.go_to_position(target_angle)  # Turn wrist
-                # shoot_piece_cmd = self.shoot_piece()  # Shoot piece
 
                 # Run commands in sequence
                 self.addCommands(
@@ -113,6 +113,37 @@ class AutonOperator(SubsystemBase):
                 )
 
         return IntakeSequence(self.elevator, self.arm)
+
+    def hard_hold(self) -> Command:
+
+        class HardHoldSequence(SequentialCommandGroup):
+            def __init__(self, elevator, arm):
+                super().__init__()
+
+                self.elevator = elevator
+                self.arm = arm
+
+                arm_safe_pos = CON_ARM["move"]
+                arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
+                arm_hard_hold_pos = CON_ARM["hard_hold"]
+                arm_hard_hold_kP = CON_ARM["hard_hold_kP"]
+                arm_hard_hold_cmd = self.arm.go_to_position(arm_hard_hold_pos, arm_hard_hold_kP)
+
+                target_height = CON_ELEV["min"]
+                elev_up_cmd = self.elevator.go_to_position(target_height)  # Move elevator
+
+                move_elevator_and_arm = ParallelRaceGroup(
+                    elev_up_cmd,
+                    arm_rotate_safe_cmd
+                )
+
+                # Run commands in sequence
+                self.addCommands(
+                    move_elevator_and_arm,
+                    arm_hard_hold_cmd
+                )
+
+        return HardHoldSequence(self.elevator, self.arm)
 
     def auton_simple_1(self) -> Command:
 

@@ -96,6 +96,8 @@ class Elevator(SubsystemBase):
                 return self.elevator.at_target_position(self.target_position)
 
             def end(self, interrupted):
+                if interrupted:
+                    print(f"///// ELEV GTP T: {self.target_position} --CANCEL--")
                 self.elevator.motor.setVoltage(0)
 
         return ElevatorMoveCommand(self, position)

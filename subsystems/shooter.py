@@ -94,8 +94,10 @@ class Shooter(SubsystemBase):
                 return False
 
             def end(self, interrupted):
-                    self.shooter.motor.setVoltage(0)
-                    self.timer.stop()
+                if interrupted:
+                    print(f"///// SHOOTER {self.action.upper()} --CANCEL--")
+                self.shooter.motor.setVoltage(0)
+                self.timer.stop()
 
         return ShooterShootCommand(self, strength, action, stop_condition, duration)
 
