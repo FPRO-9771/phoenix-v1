@@ -31,27 +31,29 @@ class Robot(wpilib.TimedRobot):
         pass
 
     def autonomousInit(self):
+        print("##### AO I")
         # Get the selected autonomous command factory function
         auto_command_factory = self.m_robotContainer.get_autonomous_command()
 
         # Create a fresh command instance and schedule it
         if auto_command_factory is not None:
-            self.autonomousCommand = auto_command_factory()
-            self.autonomousCommand.schedule()
+            self.m_autonomousCommand = auto_command_factory()
+            self.m_autonomousCommand.schedule()
 
     def autonomousPeriodic(self):
-        CommandScheduler.getInstance().run()
+        pass
 
     def autonomousExit(self):
-        """Run once when the robot exits Autonomous mode."""
-        pass
+        # Cancel all active commands
+        scheduler = CommandScheduler.getInstance()
+        scheduler.cancelAll()
 
     def teleopInit(self):
         """Run once when the robot enters Teleoperated mode."""
         print("##### TO I")
 
         # Ensure driver controls are set up in teleop mode only
-        self.m_robotContainer.configure_bindings()
+        self.m_robotContainer.setup_teleop()
 
         # If an autonomous command was running, cancel it
         if hasattr(self, 'm_autonomousCommand') and self.m_autonomousCommand is not None:

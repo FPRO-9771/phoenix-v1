@@ -1,29 +1,39 @@
-from commands2 import SubsystemBase, Command, SequentialCommandGroup, ParallelRaceGroup, ConditionalCommand, InstantCommand, WaitCommand
-from subsystems.elevator import Elevator
-from subsystems.arm import Arm
-from subsystems.shooter import Shooter
-from subsystems.drive import Drive
+from commands2 import SubsystemBase, Command, SequentialCommandGroup, ParallelRaceGroup, ConditionalCommand, \
+    InstantCommand, WaitCommand, ParallelCommandGroup
 from constants import CON_ELEV, CON_ARM, CON_SHOOT
 
 
 class AutonOperator(SubsystemBase):
-    """
-    Elevator subsystem that controls vertical movement using a TalonFX motor.
-    Uses CANrange sensor for height measurement.
-    """
 
-    def __init__(self):
+    def __init__(self, elevator, arm, shooter, climber):
+        print(f"***** AUTON OP I")
         super().__init__()
+
+        self.elevator = elevator
+        self.arm = arm
+        self.shooter = shooter
 
     def shoot(self, level: int) -> Command:
 
         class ShootSequence(SequentialCommandGroup):
-            def __init__(self, level):
+            def __init__(self, level, elevator, arm, shooter):
                 super().__init__()
 
-                self.elevator = Elevator()
-                self.arm = Arm()
-                self.shooter = Shooter()
+                # Cancel any commands currently scheduled for these subsystems
+                self.addRequirements(elevator, arm, shooter)
+
+                self.elevator = elevator
+                self.arm = arm
+                self.shooter = shooter
+
+                cancel_commands = ParallelCommandGroup(
+                    InstantCommand(lambda: elevator.getCurrentCommand().cancel()
+                    if elevator.getCurrentCommand() is not None else None),
+                    InstantCommand(lambda: arm.getCurrentCommand().cancel()
+                    if arm.getCurrentCommand() is not None else None),
+                    InstantCommand(lambda: shooter.getCurrentCommand().cancel()
+                    if shooter.getCurrentCommand() is not None else None)
+                )
 
                 arm_safe_pos = CON_ARM["move"]
                 arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
@@ -56,7 +66,8 @@ class AutonOperator(SubsystemBase):
                 def stop_shooter_condition():
                     return self.elevator.at_target_position(target_height) and self.arm.at_target_position(target_angle)
 
-                hold_piece_cmd = self.shooter.shoot(hold_strength, 'hold', stop_condition=stop_shooter_condition)  # Shoot piece
+                hold_piece_cmd = self.shooter.shoot(hold_strength, 'hold',
+                                                    stop_condition=stop_shooter_condition)  # Shoot piece
                 shoot_piece_cmd = self.shooter.shoot(shot_strength, 'shoot')
 
                 move_up_cmd_set = SequentialCommandGroup(
@@ -71,6 +82,7 @@ class AutonOperator(SubsystemBase):
                 )
 
                 full_cmd_set = [
+                    cancel_commands,
                     move_elevator_and_arm,
                     shoot_piece_cmd
                 ]
@@ -82,16 +94,16 @@ class AutonOperator(SubsystemBase):
                     # Run commands in sequence
                 self.addCommands(*full_cmd_set)
 
-        return ShootSequence(level)
+        return ShootSequence(level, self.elevator, self.arm, self.shooter)
 
     def intake(self) -> Command:
 
         class IntakeSequence(SequentialCommandGroup):
-            def __init__(self):
+            def __init__(self, elevator, arm):
                 super().__init__()
 
-                self.elevator = Elevator()
-                self.arm = Arm()
+                self.elevator = elevator
+                self.arm = arm
 
                 arm_safe_pos = CON_ARM["move"]
                 arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
@@ -111,16 +123,16 @@ class AutonOperator(SubsystemBase):
                     arm_rotate_receive_cmd
                 )
 
-        return IntakeSequence()
+        return IntakeSequence(self.elevator, self.arm)
 
     def auton_simple_1(self) -> Command:
 
         class AutonSimple1Sequence(ParallelRaceGroup):
-            def __init__(self):
+            def __init__(self, arm, shooter):
                 super().__init__()
 
-                self.arm = Arm()
-                self.shooter = Shooter()
+                self.arm = arm
+                self.shooter = shooter
 
                 arm_pos = CON_ARM["level_1"]
                 arm_rotate_cmd = self.arm.go_to_position(arm_pos)
@@ -133,17 +145,16 @@ class AutonOperator(SubsystemBase):
                     hold_piece_cmd
                 )
 
-        return AutonSimple1Sequence()
+        return AutonSimple1Sequence(self.arm, self.shooter)
 
     def auton_simple_2(self) -> Command:
 
         class AutonSimple2Sequence(SequentialCommandGroup):
-            def __init__(self):
+            def __init__(self, arm, shooter):
                 super().__init__()
 
-                self.elevator = Elevator()
-                self.arm = Arm()
-                self.shooter = Shooter()
+                self.arm = arm
+                self.shooter = shooter
 
                 arm_pos = CON_ARM["level_1"]
                 arm_rotate_cmd = self.arm.go_to_position(arm_pos)
@@ -161,24 +172,8 @@ class AutonOperator(SubsystemBase):
                     arm_flip_cmd
                 )
 
-        return AutonSimple2Sequence()
+        return AutonSimple2Sequence(self.arm, self.shooter)
 
-    # def drive(self, drivetrain, drive, max_angular_rate) -> Command:
-    #
-    #     class DriveTest(Command):
-    #         def __init__(self, _drivetrain, _drive, _max_angular_rate):
-    #             super().__init__()
-    #
-    #             _drivetrain.apply_request(
-    #                 lambda:
-    #                 _drive
-    #                 .with_rotational_rate(
-    #                     -0.3 * _max_angular_rate
-    #                 )
-    #             )
-    #
-    #     return DriveTest( drivetrain, drive, max_angular_rate)
-    #
 
 def periodic(self):
     """Periodic update function for telemetry and monitoring."""

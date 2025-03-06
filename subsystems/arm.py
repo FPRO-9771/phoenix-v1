@@ -8,7 +8,7 @@ from constants import MOTOR_IDS, CON_ARM
 
 class Arm(SubsystemBase):
 
-    def __init__(self, max_rpm: float = 2000):
+    def __init__(self):
         """Initialize the arm subsystem."""
         super().__init__()
 
@@ -32,7 +32,6 @@ class Arm(SubsystemBase):
         # Apply configurations
         self.motor.configurator.apply(configs)
 
-        self.max_rpm = max_rpm
         self.velocity_request = VelocityVoltage(0)
         self.is_running = False
 
@@ -98,13 +97,14 @@ class Arm(SubsystemBase):
 
         return ArmMoveCommand(self, position)
 
-    def manual(self, percentage_func: Callable[[], float]) -> Command:
+    def manual(self, percentage_func: Callable[[], float], max_rpm: float = 300) -> Command:
 
         class ManualRunCommand(Command):
             def __init__(self, arm, percentage_func: Callable[[], float]):
                 super().__init__()
                 self.arm = arm
                 self.percentage_func = percentage_func  # Store function instead of static value
+                self.max_rpm = max_rpm
                 self.addRequirements(arm)
                 self.ss = None
 
@@ -114,7 +114,7 @@ class Arm(SubsystemBase):
                     self.arm.stop()
                     return
                 #
-                target_rps = (percentage * self.arm.max_rpm) / 60.0
+                target_rps = (percentage * self.max_rpm) / 60.0
                 print(f"///// ARM Man R: {target_rps}")
                 self.arm.velocity_request.velocity = target_rps
                 self.arm.motor.set_control(self.arm.velocity_request)
