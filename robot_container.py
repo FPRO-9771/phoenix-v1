@@ -180,19 +180,25 @@ class RobotContainer:
             )
         )
 
-        # Automated controls with pre-cancellation
-        ctrl.a().onTrue(SequentialCommandGroup(
-            InstantCommand(cancel_subsystem_commands),
-            self.auton_operator.shoot(2)))
-        ctrl.x().onTrue(SequentialCommandGroup(
-            InstantCommand(cancel_subsystem_commands),
-            self.auton_operator.shoot(3)))
-        ctrl.y().onTrue(SequentialCommandGroup(
-            InstantCommand(cancel_subsystem_commands),
-            self.auton_operator.shoot(4)))
-        ctrl.b().onTrue(SequentialCommandGroup(
-            InstantCommand(cancel_subsystem_commands),
-            self.auton_operator.intake()))
+        # Automated controls
+        ctrl.a().onTrue(self.auton_operator.shoot(2))
+        ctrl.x().onTrue(self.auton_operator.shoot(3))
+        ctrl.y().onTrue(self.auton_operator.shoot(4))
+        ctrl.b().onTrue(self.auton_operator.intake())
+
+        # # Automated controls with pre-cancellation
+        # ctrl.a().onTrue(SequentialCommandGroup(
+        #     InstantCommand(cancel_subsystem_commands),
+        #     self.auton_operator.shoot(2)))
+        # ctrl.x().onTrue(SequentialCommandGroup(
+        #     InstantCommand(cancel_subsystem_commands),
+        #     self.auton_operator.shoot(3)))
+        # ctrl.y().onTrue(SequentialCommandGroup(
+        #     InstantCommand(cancel_subsystem_commands),
+        #     self.auton_operator.shoot(4)))
+        # ctrl.b().onTrue(SequentialCommandGroup(
+        #     InstantCommand(cancel_subsystem_commands),
+        #     self.auton_operator.intake()))
 
         ctrl.back().whileTrue(self.climber.manual(lambda: 0.2))
         ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
