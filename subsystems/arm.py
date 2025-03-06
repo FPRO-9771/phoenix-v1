@@ -60,13 +60,18 @@ class Arm(SubsystemBase):
 
         return None
 
-    def go_to_position(self, position: float, kp = 1) -> Command:
+    def go_to_position(self, position: float, ignore_min = False, kp = 1) -> Command:
 
         class ArmMoveCommand(Command):
-            def __init__(self, arm, target_position, _kp):
+            def __init__(self, arm, target_position, _ignore_min, _kp):
                 super().__init__()
                 self.arm = arm
-                self.target_position = min(max(target_position, CON_ARM["min"]), CON_ARM["max"])
+                self.ignore_min = _ignore_min
+                self.arm = arm
+                if self.ignore_min:
+                    self.target_position = target_position
+                else:
+                    self.target_position = min(max(target_position, CON_ARM["min"]), CON_ARM["max"])
                 self.kP = max(_kp, 1)
                 self.addRequirements(arm)
 
@@ -90,6 +95,7 @@ class Arm(SubsystemBase):
                 self.arm.motor.setVoltage(voltage)
 
             def isFinished(self):
+                print(f"///// ARM GTP T: {self.target_position} --FINISH--")
                 return self.arm.at_target_position(self.target_position)
 
             def end(self, interrupted):
@@ -97,7 +103,7 @@ class Arm(SubsystemBase):
                     print(f"///// ARM GTP T: {self.target_position} --CANCEL--")
                 self.arm.motor.setVoltage(0)
 
-        return ArmMoveCommand(self, position, kp)
+        return ArmMoveCommand(self, position, ignore_min, kp)
 
     def manual(self, percentage_func: Callable[[], float], max_rpm: float = 300) -> Command:
 

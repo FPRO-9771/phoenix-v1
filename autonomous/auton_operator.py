@@ -126,8 +126,10 @@ class AutonOperator(SubsystemBase):
                 arm_safe_pos = CON_ARM["move"]
                 arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
                 arm_hard_hold_pos = CON_ARM["hard_hold"]
-                arm_hard_hold_kP = CON_ARM["hard_hold_kP"]
-                arm_hard_hold_cmd = self.arm.go_to_position(arm_hard_hold_pos, arm_hard_hold_kP)
+                arm_hard_hold_kp = CON_ARM["hard_hold_kP"]
+                arm_hard_hold_cmd = self.arm.go_to_position(arm_hard_hold_pos, True, arm_hard_hold_kp)
+
+                print(f"------------- arm_hard_hold_pos: {arm_hard_hold_pos}")
 
                 target_height = CON_ELEV["min"]
                 elev_up_cmd = self.elevator.go_to_position(target_height)  # Move elevator

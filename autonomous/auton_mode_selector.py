@@ -1,5 +1,5 @@
 from autonomous.auton_modes import AutonModes
-from wpilib import SendableChooser
+from wpilib import SendableChooser, SmartDashboard
 from commands2 import SequentialCommandGroup, WaitCommand
 
 def create_auton_chooser(auton_drive, auton_operator):
@@ -17,5 +17,7 @@ def create_auton_chooser(auton_drive, auton_operator):
     chooser.addOption("Limelight", ll)
     # chooser.addOption("Timer", timer)
     # chooser.setDefaultOption("Limelight", ll)
+
+    SmartDashboard.putData("Auto Mode", chooser)
 
     return chooser

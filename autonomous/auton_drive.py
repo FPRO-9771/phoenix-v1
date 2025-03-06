@@ -48,7 +48,7 @@ class AutonDrive(SubsystemBase):
                 self.sim_iterations += 1
                 current_time = self.sim_timer.get()
                 distance = max(1.0, 5.0 - (1.5 * current_time))
-                angle = max(1.0, 30.0 - (3 * current_time))
+                angle = max(1.0, 30.0 - (7 * current_time))
                 speed_y = self.kP * (distance - 1.0)* self.outer_self._max_speed
                 rotation = (angle / 45) * self.outer_self._max_angular_rate
 
