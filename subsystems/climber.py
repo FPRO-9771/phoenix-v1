@@ -8,7 +8,7 @@ from constants import MOTOR_IDS, CON_CLIMB
 
 class Climber(SubsystemBase):
 
-    def __init__(self, max_rpm: float = 2000):
+    def __init__(self, max_rpm: float = 10000):
         """Initialize the arm subsystem."""
         super().__init__()
 
@@ -58,17 +58,14 @@ class Climber(SubsystemBase):
             self.motor.set_position(0)
             return False
 
-    # def safety_stop(self):
-    #     cp = self.get_current_position()
-    #
-    #     if cp <= CON_CLIMB["down"] + .3:
-    #         print(f"///// CLIMBER SS: min: {CON_CLIMB["down"] + .3}")
-    #         return "min"
-    #     if cp >= CON_CLIMB["up"] - .3:
-    #         print(f"///// CLIMBER SS: max: {CON_CLIMB["up"] - .3}")
-    #         return "max"
-    #
-    #     return None
+    def safety_stop(self, towards_min):
+        cp = self.get_current_position()
+
+        if towards_min is True and cp <= CON_CLIMB["min"] + CON_CLIMB["min_max_tolerance"]:
+            print(f"///// ARM SS: min: {CON_CLIMB['min'] + CON_CLIMB['min_max_tolerance']}")
+            return "min"
+
+        return None
 
     # def go_to_position (self, position: float) -> Command:
     #
@@ -116,7 +113,9 @@ class Climber(SubsystemBase):
                 self.ss = None
 
             def execute(self):
-                percentage = self.percentage_func()  # Call function to get live trigger value
+                percentage = self.percentage_func() * CON_CLIMB["power_ratio"] # Call function to get live trigger value
+                print(f"///// CLIMBER Man percentageA: {self.percentage_func()}")
+                print(f"///// CLIMBER Man percentage: {percentage}")
                 if abs(percentage) <= 0.1:  # Ignore small values
                     self.climber.stop()
                     return
@@ -131,27 +130,25 @@ class Climber(SubsystemBase):
 
                 if interrupted:
                     print(f"///// CLIMBER Man End: Interrupt")
-                    self.climber.velocity_request.velocity = 0
-                    self.climber.motor.set_control(self.climber.velocity_request)
-                    self.climber.is_running = False
-
                 else:
                     print(f"///// CLIMBER Man End: SS")
-                    cp = self.climber.get_current_position()
-                    sr = CON_CLIMB["safety_retreat"]
+                self.climber.velocity_request.velocity = 0
+                self.climber.motor.set_control(self.climber.velocity_request)
+                self.climber.is_running = False
 
-                    if self.ss == "min":
-                        self.climber.go_to_position(cp + sr).schedule()
-                    if self.ss == "max":
-                        self.climber.go_to_position(cp - sr).schedule()
+                    # cp = self.climber.get_current_position()
+                    # sr = CON_CLIMB["safety_retreat"]
+                    #
+                    # if self.ss == "min":
+                    #     self.climber.go_to_position(cp + sr).schedule()
 
             def isFinished(self):
-                # self.ss = self.climber.safety_stop()
-                #
-                # if self.ss is not None:
-                #     print(f"///// CLIMBER Man SS: {self.ss}")
-                #     return True
-                return False
+                towards_min = self.percentage_func() > 0
+                self.ss = self.climber.safety_stop(towards_min)
+
+                if self.ss is not None:
+                    print(f"///// ARM Man SS: {self.ss}")
+                    return True
 
         return ManualRunCommand(self, percentage_func)
 

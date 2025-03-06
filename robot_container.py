@@ -152,7 +152,7 @@ class RobotContainer:
 
         # slow mode with buttons
         ctrl.rightBumper().onTrue(
-            InstantCommand(lambda: self.set_speed_ratio(0.2))
+            InstantCommand(lambda: self.set_speed_ratio(0.1))
         )
         ctrl.rightBumper().onFalse(
             InstantCommand(lambda: self.set_speed_ratio(1))
@@ -191,8 +191,8 @@ class RobotContainer:
             self.shooter.manual(lambda: ctrl.getHID().getRightTriggerAxis() * -1)
         )
 
-        ctrl.back().whileTrue(self.climber.manual(0.25))
-        ctrl.start().whileTrue(self.climber.manual(-0.25))
+        ctrl.back().whileTrue(self.climber.manual(lambda: 0.25))
+        ctrl.start().whileTrue(self.climber.manual(lambda: -0.25))
 
         # Default commands
         # self.arm.setDefaultCommand(self.arm.hold_position())

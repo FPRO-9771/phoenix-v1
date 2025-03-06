@@ -2,7 +2,6 @@ from autonomous.auton_modes import AutonModes
 from wpilib import SendableChooser
 from commands2 import SequentialCommandGroup, WaitCommand
 
-
 def create_auton_chooser(auton_drive, auton_operator):
     chooser = SendableChooser()
     auton_modes = AutonModes(auton_drive, auton_operator)

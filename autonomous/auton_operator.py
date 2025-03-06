@@ -53,8 +53,7 @@ class AutonOperator(SubsystemBase):
                 elif level == 4:
                     target_height = CON_ELEV["level_4"]
                     target_angle = CON_ARM["level_4"]
-                    shot_strength = CON_SHOOT["low"]
-                    flip_angle = CON_ARM["flip"]
+                    shot_strength = CON_SHOOT["high"]
                 else:
                     print("Invalid input. Expected 2, 3, or 4.")
                     return
@@ -77,7 +76,7 @@ class AutonOperator(SubsystemBase):
                 )
 
                 move_elevator_and_arm = ParallelRaceGroup(
-                    hold_piece_cmd,
+                    # hold_piece_cmd,
                     move_up_cmd_set
                 )
 
