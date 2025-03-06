@@ -1,11 +1,12 @@
 from commands2 import SubsystemBase, Command
 from wpilib import Timer
+import math
 
 
 class AutonDrive(SubsystemBase):
 
     def __init__(self, drivetrain, _drive, _max_speed, _max_angular_rate, limelight_handler):
-        print(f"***** AUTON DR I")
+        print(f"+++++ AUTON DR I")
         super().__init__()
 
         self._max_speed = _max_speed
@@ -28,18 +29,14 @@ class AutonDrive(SubsystemBase):
 
                 # ToDo: simulation - comment out
                 self.sim_timer = None
-                self.sim_distance = 5.0
-                self.sim_angle = 30
                 self.sim_iterations = 0
 
                 # Control variables
                 self.kP = 0.5
-                self.min_turn_speed = 0.2
-                self.max_turn_speed = 0.6
                 self.distance_threshold = 1.1
 
             def initialize(self):
-                print("Vision Approach Command Starting")
+                print(f"+++++ AUTON DR approach_target I")
 
                 self.sim_timer = Timer()
                 self.sim_timer.start()
@@ -54,27 +51,6 @@ class AutonDrive(SubsystemBase):
                 angle = max(1.0, 30.0 - (3 * current_time))
                 speed_y = self.kP * (distance - 1.0)* self.outer_self._max_speed
                 rotation = (angle / 45) * self.outer_self._max_angular_rate
-
-                # ToDo: LL data - comment in
-                # result = self.outer_self.limelight_handler.read_results()
-                # if result and result.validity and result.fiducialResults:
-                #     print(f"-------")
-                #     print(f"-------")
-                #     print("----- Target: Acquired")
-                #     target_area = result.fiducialResults[0].target_area
-                #     tx = result.fiducialResults[0].target_x_degrees
-                #     print(f"------- ta: {target_area}")
-                #     print(f"------- tx: {tx}")
-                #
-                #     # if tx:
-                #     #     self.apply_request_command = self.drivetrain.apply_request(lambda: self.drive.with_rotational_rate(tx * 0.05))
-                #     #     self.apply_request_command.schedule()  # Schedule it to actually run
-                #
-                #     if abs(tx) > 1.0:
-                #         scaled_rotation = tx / 45
-                #         rotation_rate = -scaled_rotation * self.max_angular_rate
-                #         print("----- Scaled Rotation:", scaled_rotation)
-                #         print("----- Rotation Rate:", rotation_rate)
 
                 # # Log execution details
                 print(
@@ -95,9 +71,9 @@ class AutonDrive(SubsystemBase):
                 self.outer_self._drive_robot(0, 0)
 
                 if interrupted:
-                    print("Vision Approach Command interrupted")
+                    print(f"+++++ AUTON DR approach_target Interrupted")
                 else:
-                    print("Vision Approach Command completed successfully")
+                    print(f"+++++ AUTON DR approach_target End")
 
             def isFinished(self):
 
@@ -110,6 +86,52 @@ class AutonDrive(SubsystemBase):
 
         # Create and return the command
         return VisionApproachCommand(self)
+
+    def limelight(self, target_tag_id=None) -> Command:
+        """
+        Creates a command that turns the robot until the simulated target distance is 1.0.
+        """
+
+        class LimelightCommand(Command):
+            def __init__(self, outer_self, _target_tag_id):
+                super().__init__()
+                self.outer_self = outer_self
+                self.target_tag_id = _target_tag_id
+                # self.addRequirements(outer_self.drivetrain)
+
+            def initialize(self):
+                print(f"+++++ AUTON DR limelight I")
+
+
+            def execute(self):
+
+                print(f"+++++ AUTON DR limelight ::: Seeking")
+                result = self.outer_self.limelight_handler.get_target_data(target_tag_id)
+                if result:
+                    print(f"+++++ AUTON DR limelight ::: >> Found <<")
+                    print(f"+++++ AUTON DR limelight ::: >> ID  : {result.tag_id}     <<")
+                    print(f"+++++ AUTON DR limelight ::: >> Or Y: {result.yaw} .... P: {result.pitch}, R: {result.roll} <<")
+                    print(f"+++++ AUTON DR limelight ::: >> XPos: {result.x_pos}     <<")
+                    print(f"+++++ AUTON DR limelight ::: >> Dist: {result.distance}     <<")
+
+                # ToDo: I think that the LL variables should move the robot like this:
+                # result.distance controls Y
+                # result.x_pos controls X
+                # result.yaw controls rotation
+
+                # self.outer_self._drive_robot(rotation, 0)
+
+            def end(self, interrupted):
+                if interrupted:
+                    print(f"+++++ AUTON DR limelight Interrupted")
+                else:
+                    print(f"+++++ AUTON DR limelight End")
+
+            def isFinished(self):
+                False
+
+        # Create and return the command
+        return LimelightCommand(self, target_tag_id)
 
     def _drive_robot(self, rotation=0, x=0, y=0):
 

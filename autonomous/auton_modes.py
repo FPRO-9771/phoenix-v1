@@ -9,7 +9,7 @@ class AutonModes(SubsystemBase):
         self.auton_drive = auton_drive
         self.auton_operator = auton_operator
 
-    def blue_right_auto(self) -> Command:
+    def test_timer_auto(self) -> Command:
 
         class AutoSequence(SequentialCommandGroup):
             def __init__(self, auton_drive, auton_operator):
@@ -20,6 +20,25 @@ class AutonModes(SubsystemBase):
 
                 full_cmd_set = [
                     auton_drive.approach_target(),
+                    WaitCommand(1),
+                    auton_operator.shoot(3)
+                ]
+
+                self.addCommands(*full_cmd_set)
+
+        return AutoSequence(self.auton_drive, self.auton_operator)
+
+    def test_ll_auto(self) -> Command:
+
+        class AutoSequence(SequentialCommandGroup):
+            def __init__(self, auton_drive, auton_operator):
+                super().__init__()
+
+                self.auton_drive = auton_drive
+                self.auton_operator = auton_operator
+
+                full_cmd_set = [
+                    auton_drive.limelight(),
                     WaitCommand(1),
                     auton_operator.shoot(3)
                 ]

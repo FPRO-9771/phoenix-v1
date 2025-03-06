@@ -27,3 +27,8 @@ INSTRUCTIONS = {
         "drive1_timeout":3.5,
     }
 }
+
+DRIVING = {
+    "max_drive_speed_ratio": .5,
+    "min_drive_speed_ratio": .2,
+}

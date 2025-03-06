@@ -7,9 +7,15 @@ def create_auton_chooser(auton_drive, auton_operator):
     auton_modes = AutonModes(auton_drive, auton_operator)
 
     # Create functions that will create fresh command instances when called
-    def blue_right():
-        return auton_modes.blue_right_auto()
+    def timer():
+        return auton_modes.test_timer_auto()
 
-    chooser.setDefaultOption("Auto Blue Right", blue_right)
+    def ll():
+        return auton_modes.test_ll_auto()
+
+    chooser.setDefaultOption("Timer", timer)
+    chooser.addOption("Limelight", ll)
+    # chooser.addOption("Timer", timer)
+    # chooser.setDefaultOption("Limelight", ll)
 
     return chooser
