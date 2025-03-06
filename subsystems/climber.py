@@ -8,7 +8,7 @@ from constants import MOTOR_IDS, CON_CLIMB
 
 class Climber(SubsystemBase):
 
-    def __init__(self, max_rpm: float = 3000):
+    def __init__(self, max_rpm: float = 10000):
         """Initialize the arm subsystem."""
         super().__init__()
 

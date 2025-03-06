@@ -162,7 +162,7 @@ class RobotContainer:
 
         # slow mode with buttons
         ctrl.rightBumper().onTrue(
-            InstantCommand(lambda: self.set_speed_ratio(0.2))
+            InstantCommand(lambda: self.set_speed_ratio(0.1))
         )
         ctrl.rightBumper().onFalse(
             InstantCommand(lambda: self.set_speed_ratio(1))

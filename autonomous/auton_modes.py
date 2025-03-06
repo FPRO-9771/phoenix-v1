@@ -10,19 +10,50 @@ from wpilib import Timer
 
 # from subsystems.shooter import Shooter
 
-class Leave(SequentialCommandGroup):
+class LeaveRed(SequentialCommandGroup):
 
 
     def __init__(self, drivetrain, drive):
 
         super().__init__(
+            WaitCommand(1),
             drivetrain.seed_field_centric(),
             WaitCommand(0.5),
             drivetrain.apply_request(
                 lambda: (
                     drive
                     .with_velocity_x(
-                        INSTRUCTIONS["leave"]["drive1_v_x"]
+                        INSTRUCTIONS["leave"]["drive1_v_x"]["red"]
+                    )
+                )
+            ).withTimeout(INSTRUCTIONS["leave"]["drive1_timeout"]),
+            drivetrain.apply_request(
+                lambda: (
+                    drive
+                    .with_velocity_x(
+                        0
+                    )
+                )
+            ).withTimeout(0)
+        )
+
+    def end(self, interrupted):
+        print(f"***** AUTON LEAVE End")
+
+class LeaveBlue(SequentialCommandGroup):
+
+
+    def __init__(self, drivetrain, drive):
+
+        super().__init__(
+            WaitCommand(1),
+            drivetrain.seed_field_centric(),
+            WaitCommand(0.5),
+            drivetrain.apply_request(
+                lambda: (
+                    drive
+                    .with_velocity_x(
+                        INSTRUCTIONS["leave"]["drive1_v_x"]["blue"]
                     )
                 )
             ).withTimeout(INSTRUCTIONS["leave"]["drive1_timeout"]),
@@ -44,6 +75,7 @@ class ShootSides(SequentialCommandGroup):
     def __init__(self, drivetrain, drive, auton_operator):
 
         super().__init__(
+            WaitCommand(1),
             drivetrain.seed_field_centric(),
             WaitCommand(0.5),
             auton_operator.auton_simple_1(),
@@ -71,20 +103,72 @@ class ShootSides(SequentialCommandGroup):
     def end(self, interrupted):
         print(f"***** AUTON SHOOT Left End")
 
-class ShootCenter(SequentialCommandGroup):
+class ShootCenterRed(SequentialCommandGroup):
     DEFAULT = True
 
     def __init__(self, drivetrain, drive, auton_operator):
 
         super().__init__(
+            WaitCommand(1),
             drivetrain.seed_field_centric(),
-            WaitCommand(0.5),
+            WaitCommand(1),
             auton_operator.auton_simple_1(),
             drivetrain.apply_request(
                 lambda: (
                     drive
                     .with_velocity_x(
-                        INSTRUCTIONS["shoot_center"]["drive1_v_x"]
+                        INSTRUCTIONS["shoot_center"]["drive1_v_x"]["red"]
+                    )
+                )
+            ).withTimeout(INSTRUCTIONS["shoot_center"]["drive1_timeout"]),
+            drivetrain.apply_request(
+                lambda: (
+                    drive
+                    .with_velocity_x(
+                        0
+                    )
+                )
+            ).withTimeout(0),
+            WaitCommand(1.0),
+            drivetrain.apply_request(
+                lambda: (
+                    drive
+                    .with_velocity_y(
+                        INSTRUCTIONS["shoot_center"]["drive2_v_y"]
+                    )
+                )
+            ).withTimeout(INSTRUCTIONS["shoot_center"]["drive2_timeout"]),
+            drivetrain.apply_request(
+                lambda: (
+                    drive
+                    .with_velocity_y(
+                        0
+                    )
+                )
+            ).withTimeout(0),
+            WaitCommand(0.5),
+            auton_operator.auton_simple_2(),
+            WaitCommand(1.0),
+        )
+
+    def end(self, interrupted):
+        print(f"***** AUTON SHOOT Center End")
+
+class ShootCenterBlue(SequentialCommandGroup):
+    DEFAULT = True
+
+    def __init__(self, drivetrain, drive, auton_operator):
+
+        super().__init__(
+            WaitCommand(1),
+            drivetrain.seed_field_centric(),
+            WaitCommand(1),
+            auton_operator.auton_simple_1(),
+            drivetrain.apply_request(
+                lambda: (
+                    drive
+                    .with_velocity_x(
+                        INSTRUCTIONS["shoot_center"]["drive1_v_x"]["blue"]
                     )
                 )
             ).withTimeout(INSTRUCTIONS["shoot_center"]["drive1_timeout"]),
