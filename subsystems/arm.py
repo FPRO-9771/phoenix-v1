@@ -2,9 +2,12 @@ from commands2 import SubsystemBase, Command
 from phoenix6.hardware import TalonFX
 from phoenix6.configs import TalonFXConfiguration, Slot0Configs
 from phoenix6.signals import NeutralModeValue
-from phoenix6.controls import VelocityVoltage, PositionVoltage
+from phoenix6.controls import VelocityVoltage, PositionVoltage, VoltageOut
 from typing import Callable
 from constants import MOTOR_IDS, CON_ARM
+
+# for testing
+# from wpilib import Timer
 
 class Arm(SubsystemBase):
 
@@ -26,6 +29,8 @@ class Arm(SubsystemBase):
         slot0.k_v = 0.12  # Feed forward gain
         configs.slot0 = slot0
 
+        self.voltage_request = VoltageOut(0)
+
         # Set motor to coast mode when stopped
         configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
 
@@ -38,8 +43,16 @@ class Arm(SubsystemBase):
         # Current target angle and state tracking
         self.is_holding_position = False
 
+        # for testing
+        # self.sim_timer = Timer()
+
     def get_current_position(self) -> float:
         motor_position = self.motor.get_position().value * -1
+
+        # # for testing
+        # elapsed_time = self.sim_timer.get()
+        # motor_position = elapsed_time * 1
+
         print(f"///// ARM CP: {motor_position}")
         return motor_position
 
@@ -75,24 +88,24 @@ class Arm(SubsystemBase):
                 self.kP = max(_kp, 1)
                 self.addRequirements(arm)
 
+                # for testing
+                # self.arm.sim_timer.start()
+
             def initialize(self):
                 # if not self.arm.is_holding_position:  # Only print when not holding
                 print(f"///// ARM GTP T: {self.target_position}")
                 self.arm.target_position = self.target_position
 
             def execute(self):
-                cp = self.arm.get_current_position()
-                error = self.target_position - cp
+                # use function to get accelerated and decelerated voltage
+                voltage = self.get_voltage() * -1
+                print(f"///// ELEV GTP V: {voltage}")
 
-                # Simple proportional control
-                voltage = error * self.kP
+                self.arm.voltage_request.output = voltage
 
-                # Limit voltage for safety
-                voltage = min(max(voltage, -CON_ARM["voltage_limit"]), CON_ARM["voltage_limit"]) * -1
-                # print(f"///// ARM GTP V: {voltage}")
+                # Apply using control request - this explicitly sets voltage control mode
+                self.arm.motor.set_control(self.arm.voltage_request)
 
-                # Apply voltage to motor
-                self.arm.motor.setVoltage(voltage)
 
             def isFinished(self):
                 print(f"///// ARM GTP T: {self.target_position} --FINISH--")
@@ -102,6 +115,22 @@ class Arm(SubsystemBase):
                 if interrupted:
                     print(f"///// ARM GTP T: {self.target_position} --CANCEL--")
                 self.arm.motor.setVoltage(0)
+
+                self.arm.sim_timer.reset()
+
+            def get_voltage(self):
+                const = CON_ARM["speed"]
+                cp = self.arm.get_current_position()
+                tp = self.target_position
+                v_min = const["v_min"]
+                v_max = const["v_max"]
+                pa_ratio = const["cp_to_acceleration_ratio"]
+                if cp >= tp:
+                    return 0
+                else:
+                    a = max(v_min, cp * pa_ratio)
+                    b = max(v_min, (tp - cp) * pa_ratio)
+                    return min(a, b, v_max) * const["v_calc_to_limit_ratio"]
 
         return ArmMoveCommand(self, position, ignore_min, kp)
 
