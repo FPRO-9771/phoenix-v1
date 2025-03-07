@@ -1,7 +1,7 @@
 from commands2 import SubsystemBase, Command
 from wpilib import Timer
 import math
-
+from autonomous.auton_constants import DRIVING
 
 class AutonDrive(SubsystemBase):
 
@@ -97,6 +97,9 @@ class AutonDrive(SubsystemBase):
                 super().__init__()
                 self.outer_self = outer_self
                 self.target_tag_id = _target_tag_id
+                self.on_target = False
+                self.color = "red"
+                self.distance = 0
                 # self.addRequirements(outer_self.drivetrain)
 
             def initialize(self):
@@ -105,21 +108,31 @@ class AutonDrive(SubsystemBase):
 
             def execute(self):
 
-                print(f"+++++ AUTON DR limelight ::: Seeking")
+                # print(f"+++++ AUTON DR limelight ::: Seeking")
                 result = self.outer_self.limelight_handler.get_target_data(target_tag_id)
                 if result:
-                    print(f"+++++ AUTON DR limelight ::: >> Found <<")
-                    print(f"+++++ AUTON DR limelight ::: >> ID  : {result.tag_id}     <<")
-                    print(f"+++++ AUTON DR limelight ::: >> Or Y: {result.yaw} .... P: {result.pitch}, R: {result.roll} <<")
-                    print(f"+++++ AUTON DR limelight ::: >> XPos: {result.x_pos}     <<")
-                    print(f"+++++ AUTON DR limelight ::: >> Dist: {result.distance}     <<")
+                    # print(f"+++++ AUTON DR limelight ::: >> Found <<")
+                    print(f"+++++ AUTON DR limelight ::: >> ID  : {result["tag_id"]} "
+                          f" Or Y: {result["yaw"]:.3f}  "
+                          f" XPos: {result["x_pos"]:.3f}  "
+                          f" Dist: {result["distance"]:.3f}   <<")
 
-                # ToDo: I think that the LL variables should move the robot like this:
-                # result.distance controls Y
-                # result.x_pos controls X
-                # result.yaw controls rotation
+                    self.distance = result["distance"]
+                    speed_x = 0
+                    speed_y = 0
+                    rotation = 0
+                    speed_x = self.calculate_drive_variable("speed_x", result["distance"])
+                    speed_y = self.calculate_drive_variable("speed_y", result["x_pos"])
+                    rotation = self.calculate_drive_variable("rotation", result["yaw"])
 
-                # self.outer_self._drive_robot(rotation, 0)
+                    print(f"+++++ AUTON DR move ::: >> "
+                          f" X: {speed_x:.3f}  "
+                          f" Y: {speed_y:.3f}  "
+                          f" R: {rotation:.3f}   <<")
+
+                    self.outer_self._drive_robot(rotation, speed_x, speed_y)
+                else:
+                    self.outer_self._drive_robot(0, 0, 0)
 
             def end(self, interrupted):
                 if interrupted:
@@ -128,7 +141,20 @@ class AutonDrive(SubsystemBase):
                     print(f"+++++ AUTON DR limelight End")
 
             def isFinished(self):
-                False
+                return self.on_target
+
+            def calculate_drive_variable(self, v_type, v_input):
+                const = DRIVING[v_type]
+                if "engage_at_distance" in const:
+                    if const["engage_at_distance"] < self.distance:
+                        return 0
+                if abs(v_input) < const["tolerance"]:
+                    return 0
+                v = v_input * const["multiplier"] * const["inverter"][self.color]
+                v_sign = math.copysign(1, v)
+                if "max" in const:
+                    v = min(abs(v), abs(const["max"])) * v_sign
+                return v + (const["add_min"] * v_sign)
 
         # Create and return the command
         return LimelightCommand(self, target_tag_id)

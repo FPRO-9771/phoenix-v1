@@ -29,6 +29,33 @@ INSTRUCTIONS = {
 }
 
 DRIVING = {
-    "max_drive_speed_ratio": .5,
-    "min_drive_speed_ratio": .2,
+    "speed_x": {
+        "inverter": {
+            "red": 1,
+            "blue": -1
+        },
+        "multiplier": 0.4,
+        "add_min": 0.35,
+        "max": 3,
+        "tolerance": 0.25
+    },
+    "speed_y": {
+        "inverter": {
+            "red": -1,
+            "blue": 1
+        },
+        "multiplier": 1,
+        "add_min": 0.3,
+        "tolerance": 0.04
+    },
+    "rotation": {
+        "inverter": {
+            "red": -1,
+            "blue": 1
+        },
+        "multiplier": 0.005,
+        "add_min": 0.45,
+        "tolerance": 0.5,
+        "engage_at_distance": 99
+    }
 }
