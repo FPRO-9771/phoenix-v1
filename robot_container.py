@@ -173,7 +173,7 @@ class RobotContainer:
 
         ctrl.rightBumper().onTrue(InstantCommand(lambda: CommandScheduler.getInstance().cancelAll()))
 
-        ctrl.leftBumper().onTrue(self.auton_operator.hard_hold())
+        # ctrl.leftBumper().onTrue(self.auton_operator.hard_hold())
 
         # Automated controls
         ctrl.a().onTrue(self.auton_operator.shoot(2))

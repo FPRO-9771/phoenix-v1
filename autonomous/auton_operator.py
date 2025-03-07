@@ -126,8 +126,8 @@ class AutonOperator(SubsystemBase):
                 arm_safe_pos = CON_ARM["move"]
                 arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
                 arm_hard_hold_pos = CON_ARM["hard_hold"]
-                arm_hard_hold_kp = CON_ARM["hard_hold_kP"]
-                arm_hard_hold_cmd = self.arm.go_to_position(arm_hard_hold_pos, True, arm_hard_hold_kp)
+                arm_hard_hold_v = CON_ARM["hard_hold_v"]
+                # arm_hard_hold_cmd = self.arm.go_to_position(arm_hard_hold_pos, True, arm_hard_hold_v)
 
                 print(f"------------- arm_hard_hold_pos: {arm_hard_hold_pos}")
 
@@ -142,7 +142,7 @@ class AutonOperator(SubsystemBase):
                 # Run commands in sequence
                 self.addCommands(
                     move_elevator_and_arm,
-                    arm_hard_hold_cmd
+                    # arm_hard_hold_cmd
                 )
 
         return HardHoldSequence(self.elevator, self.arm)
