@@ -17,7 +17,12 @@ CON_ELEV = {
     "level_4": 114,
     "target_position_tolerance": 0.3,
     "safety_retreat": 1,
-    "voltage_limit": 8
+    "speed": {
+        "v_max": 12,
+        "v_min": 2,
+        "cp_to_acceleration_ratio": 0.7,
+        "v_calc_to_limit_ratio": 0.3
+    }
 }
 
 CON_ARM = {
@@ -35,8 +40,13 @@ CON_ARM = {
     "target_position_tolerance": 0.3,
     "elevator_danger": 5.75,  # angle where we should not be moving the elevator
     "safety_retreat": 0.5,
-    "voltage_limit": 2,
-    "hard_hold_kP": .05,  # Safe position to move up and down
+    "hard_hold_v": .2,
+    "speed": {
+        "v_max": 12,
+        "v_min": 2,
+        "cp_to_acceleration_ratio": 1,
+        "v_calc_to_limit_ratio": 0.3
+    }
 }
 
 CON_SHOOT = {
