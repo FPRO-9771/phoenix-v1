@@ -84,6 +84,8 @@ class RobotContainer:
         self.auton_drive = AutonDrive(self.drivetrain, self._drive_rc, self._max_speed, self._max_angular_rate,
                                       self.limelight_handler)
 
+        self.robot_centric = False
+
         # Set up auton functions and dashboard selection
         self.chooser = SendableChooser()
         self.chooser = create_auton_chooser(self.auton_drive, self.auton_operator)
@@ -155,7 +157,7 @@ class RobotContainer:
 
         # reset the field-centric heading on left bumper press
         ctrl.leftBumper().onTrue(
-            self.drivetrain.runOnce(lambda: self.drivetrain.seed_field_centric())
+            self.drivetrain.runOnce(lambda: self.toggle_robot_centric())
         )
 
         self.drivetrain.register_telemetry(
@@ -169,6 +171,34 @@ class RobotContainer:
         ctrl.rightBumper().onFalse(
             InstantCommand(lambda: self.set_speed_ratio(1))
         )
+
+        Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
+            self.shooter.manual(lambda: ctrl.getHID().getLeftTriggerAxis())
+        )
+
+
+    def toggle_robot_centric(self):
+
+        _BLUE_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.fromDegrees(0)
+        _RED_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.fromDegrees(180)
+
+        alliance_color = DriverStation.getAlliance()
+        rotation = _BLUE_ALLIANCE_PERSPECTIVE_ROTATION
+
+        if alliance_color == DriverStation.Alliance.kRed:
+            rotation = _RED_ALLIANCE_PERSPECTIVE_ROTATION
+
+        state = self.drivetrain.get_state()
+        current_heading = state.raw_heading
+
+        if self.robot_centric:
+            # print(f"toggle_robot_centric self.robot_centric ORIGINAL")
+            self.drivetrain.set_operator_perspective_forward(rotation)
+        else:
+            # print(f"toggle_robot_centric self.robot_centric ROBOT CENTRIC")
+            self.drivetrain.set_operator_perspective_forward(current_heading)
+
+        self.robot_centric = not self.robot_centric  # Toggle the boolean value
 
     def configure_operator_controls(self):
         """Configure operator controller bindings (mechanisms)."""

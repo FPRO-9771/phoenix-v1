@@ -192,6 +192,7 @@ class Elevator(SubsystemBase):
 
     def periodic(self):
         """Periodic update function for telemetry and monitoring."""
+        pass
         # current_height = self.get_current_height()
         #
         # # Only report if height has changed significantly

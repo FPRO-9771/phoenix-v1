@@ -263,6 +263,7 @@ class Arm(SubsystemBase):
 
     def periodic(self):
         """Periodic update function."""
+        pass
         # cr = self.get_current_rotation()
         # if cr < self.MIN_ANGLE or cr > self.MAX_ANGLE:
         #     print(f"WARNING: Arm angle {cr} outside safe range!")
