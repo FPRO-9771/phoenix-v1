@@ -1,6 +1,7 @@
 from commands2 import SubsystemBase, Command, SequentialCommandGroup, ParallelRaceGroup, ConditionalCommand, \
     InstantCommand, WaitCommand, ParallelCommandGroup
 from constants import CON_ELEV, CON_ARM, CON_SHOOT
+import wpilib
 
 
 class AutonOperator(SubsystemBase):
@@ -13,11 +14,11 @@ class AutonOperator(SubsystemBase):
         self.arm = arm
         self.shooter = shooter
 
-    def shoot(self, level: int) -> Command:
+    def shoot(self, level: int, shoot = True, safe_position = True) -> Command:
 
         class ShootSequence(SequentialCommandGroup):
-            def __init__(self, level, elevator, arm, shooter):
-                print(f"***** AUTON OP SHOOT: {level}")
+            def __init__(self, level, shoot, safe_position, elevator, arm, shooter):
+                print(f"***** AUTON OP SHOOT: {level} {shoot}")
                 super().__init__()
 
                 # Cancel any commands currently scheduled for these subsystems
@@ -61,10 +62,18 @@ class AutonOperator(SubsystemBase):
                                                     stop_condition=stop_shooter_condition)  # Shoot piece
                 shoot_piece_cmd = self.shooter.shoot(shot_strength, 'shoot')
 
+                move_up_cmd_list = [
+                    self.arm.lock(False)
+                ]
+
+                if safe_position is True:
+                    move_up_cmd_list.append(arm_rotate_safe_cmd)
+
+                move_up_cmd_list.append(elev_up_cmd)
+                move_up_cmd_list.append(arm_rotate_shot_cmd)
+
                 move_up_cmd_set = SequentialCommandGroup(
-                    arm_rotate_safe_cmd,
-                    elev_up_cmd,
-                    arm_rotate_shot_cmd
+                    *move_up_cmd_list
                 )
 
                 move_elevator_and_arm = ParallelRaceGroup(
@@ -73,9 +82,11 @@ class AutonOperator(SubsystemBase):
                 )
 
                 full_cmd_set = [
-                    move_elevator_and_arm,
-                    shoot_piece_cmd
+                    move_elevator_and_arm
                 ]
+
+                if shoot is True:
+                    full_cmd_set.append(shoot_piece_cmd)
 
                 if flip_angle is not None:
                     arm_flip_cmd = self.arm.go_to_position(flip_angle)
@@ -84,7 +95,7 @@ class AutonOperator(SubsystemBase):
                     # Run commands in sequence
                 self.addCommands(*full_cmd_set)
 
-        return ShootSequence(level, self.elevator, self.arm, self.shooter)
+        return ShootSequence(level, shoot, safe_position, self.elevator, self.arm, self.shooter)
 
     def intake(self) -> Command:
 
@@ -107,6 +118,7 @@ class AutonOperator(SubsystemBase):
 
                 # Run commands in sequence
                 self.addCommands(
+                    self.arm.lock(False),
                     arm_rotate_safe_cmd,
                     elev_up_cmd,
                     arm_rotate_receive_cmd
@@ -127,7 +139,7 @@ class AutonOperator(SubsystemBase):
                 arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
                 arm_hard_hold_pos = CON_ARM["hard_hold"]
                 arm_hard_hold_v = CON_ARM["hard_hold_v"]
-                # arm_hard_hold_cmd = self.arm.go_to_position(arm_hard_hold_pos, True, arm_hard_hold_v)
+                arm_hard_hold_cmd = self.arm.go_to_position(arm_hard_hold_pos, True, arm_hard_hold_v)
 
                 print(f"------------- arm_hard_hold_pos: {arm_hard_hold_pos}")
 
@@ -142,7 +154,8 @@ class AutonOperator(SubsystemBase):
                 # Run commands in sequence
                 self.addCommands(
                     move_elevator_and_arm,
-                    # arm_hard_hold_cmd
+                    arm_hard_hold_cmd,
+                    self.arm.lock(True)
                 )
 
         return HardHoldSequence(self.elevator, self.arm)
@@ -196,6 +209,39 @@ class AutonOperator(SubsystemBase):
 
         return AutonSimple2Sequence(self.arm, self.shooter)
 
+    def shooter_lock(self) -> Command:
+
+        class ShooterLockSequence(SequentialCommandGroup):
+            def __init__(self, elevator, arm):
+                super().__init__()
+
+                self.elevator = elevator
+                self.arm = arm
+
+                # arm_safe_pos = CON_ARM["move"]
+                # arm_rotate_safe_cmd = self.arm.go_to_position(arm_safe_pos)
+                # arm_hard_hold_pos = CON_ARM["hard_hold"]
+                # arm_hard_hold_v = CON_ARM["hard_hold_v"]
+                # # arm_hard_hold_cmd = self.arm.go_to_position(arm_hard_hold_pos, True, arm_hard_hold_v)
+                #
+                # print(f"------------- arm_hard_hold_pos: {arm_hard_hold_pos}")
+                #
+                # target_height = CON_ELEV["min"]
+                # elev_up_cmd = self.elevator.go_to_position(target_height)  # Move elevator
+                #
+                # move_elevator_and_arm = ParallelRaceGroup(
+                #     elev_up_cmd,
+                #     arm_rotate_safe_cmd
+                # )
+
+                # Run commands in sequence
+                self.addCommands(
+                    arm.lock(True),
+                    arm.lock(False),
+                    # arm_hard_hold_cmd
+                )
+
+        return ShooterLockSequence(self.elevator, self.arm)
 
 def periodic(self):
     """Periodic update function for telemetry and monitoring."""

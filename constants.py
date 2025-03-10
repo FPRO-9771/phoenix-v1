@@ -20,8 +20,8 @@ CON_ELEV = {
     "speed": {
         "v_max": 12,
         "v_min": 2,
-        "cp_to_acceleration_ratio": 0.7,
-        "v_calc_to_limit_ratio": 0.3
+        "cp_to_acceleration_ratio": 1.3,
+        "v_calc_to_limit_ratio": 1
     }
 }
 
@@ -29,13 +29,13 @@ CON_ARM = {
     "min": 2.1,
     "max": 14,
     "min_max_tolerance": 0,
-    "hard_hold": -1,
+    "hard_hold": 0,
     "move": 2.1,  # Safe position to move up and down
     "intake": 4.9,  # Angle for intake of coral
     "level_1": 9,  # Angle to deposit coral onto reef
     "level_1_flip": 9,
-    "level_23": 8.6,  # Angle to deposit coral onto reef
-    "level_4": 9.3,  # angle for highest level, higher is steeper
+    "level_23": 8.8,  # Angle to deposit coral onto reef
+    "level_4": 9.8,  # angle for highest level, higher is steeper
     "flip": 8,  # angle for highest level
     "target_position_tolerance": 0.3,
     "elevator_danger": 5.75,  # angle where we should not be moving the elevator
@@ -44,8 +44,13 @@ CON_ARM = {
     "speed": {
         "v_max": 12,
         "v_min": 2,
-        "cp_to_acceleration_ratio": 1,
-        "v_calc_to_limit_ratio": 0.3
+        "cp_to_acceleration_ratio": 1.2,
+        "v_calc_to_limit_ratio": 0.5
+    },
+    "lock": {
+        "open": 155,
+        "closed": 175,
+        "time_delay": 0.5
     }
 }
 

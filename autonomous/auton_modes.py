@@ -1,4 +1,4 @@
-from commands2 import SubsystemBase, Command, CommandScheduler, WaitCommand, SequentialCommandGroup, StartEndCommand, RunCommand, InstantCommand
+from commands2 import SubsystemBase, Command, CommandScheduler, WaitCommand, SequentialCommandGroup, ParallelRaceGroup
 
 class AutonModes(SubsystemBase):
 
@@ -28,7 +28,7 @@ class AutonModes(SubsystemBase):
 
         return AutoSequence(self.auton_drive, self.auton_operator)
 
-    def test_ll_auto(self) -> Command:
+    def test_ll_data(self) -> Command:
 
         class AutoSequence(SequentialCommandGroup):
             def __init__(self, auton_drive, auton_operator):
@@ -38,9 +38,68 @@ class AutonModes(SubsystemBase):
                 self.auton_operator = auton_operator
 
                 full_cmd_set = [
+                    auton_drive.limelight_data()
+                ]
+
+                self.addCommands(*full_cmd_set)
+
+        return AutoSequence(self.auton_drive, self.auton_operator)
+
+
+    def test_ll_auto(self) -> Command:
+
+        class AutoSequence(SequentialCommandGroup):
+            def __init__(self, auton_drive, auton_operator):
+                super().__init__()
+
+                self.auton_drive = auton_drive
+                self.auton_operator = auton_operator
+
+                get_ready_to_shoot = ParallelRaceGroup(
+                    auton_drive.align_pipe('left'),
+                    auton_operator.shoot(4, False)
+                )
+
+                full_cmd_set = [
                     auton_drive.limelight(),
-                    WaitCommand(1),
-                    auton_operator.shoot(3)
+                    get_ready_to_shoot,
+                    auton_operator.shoot(4, True, False)
+                ]
+
+                self.addCommands(*full_cmd_set)
+
+        return AutoSequence(self.auton_drive, self.auton_operator)
+
+
+    def test_pa_auto(self) -> Command:
+
+        class AutoSequence(SequentialCommandGroup):
+            def __init__(self, auton_drive, auton_operator):
+                super().__init__()
+
+                self.auton_drive = auton_drive
+                self.auton_operator = auton_operator
+
+                full_cmd_set = [
+                    auton_drive.align_pipe('left')
+                ]
+
+                self.addCommands(*full_cmd_set)
+
+        return AutoSequence(self.auton_drive, self.auton_operator)
+
+    def test_servo(self) -> Command:
+
+        class AutoSequence(SequentialCommandGroup):
+            def __init__(self, auton_drive, auton_operator):
+                super().__init__()
+
+                self.auton_drive = auton_drive
+                self.auton_operator = auton_operator
+
+                full_cmd_set = [
+                    auton_operator.hard_hold(),
+                    auton_operator.shooter_lock()
                 ]
 
                 self.addCommands(*full_cmd_set)

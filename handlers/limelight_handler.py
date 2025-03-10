@@ -2,6 +2,7 @@ import math
 import limelight
 import limelightresults
 
+from autonomous.auton_constants import LL_DATA_SETTINGS
 
 class LimelightHandler:
     def __init__(self, debug=True):
@@ -119,9 +120,26 @@ class LimelightHandler:
                                                                                'robot_pose_target_space') else None
         }
 
+        target_data['mapped'] = self.map_ll_data(target_data)
+
         return target_data
 
         # return None
+
+    def map_ll_data(self, result):
+
+        def do_multiplier(v_type, v_input):
+            const = LL_DATA_SETTINGS[v_type]
+            if "multiplier" in const:
+                return v_input * const["multiplier"]
+            else:
+                return v_input
+
+        return {
+            "yaw": do_multiplier("yaw", result["yaw"]),
+            "tx": do_multiplier("tx", result["tx"]),
+            "distance": do_multiplier("distance", result["distance"])
+        }
 
     def cleanup(self):
         if self.limelight_instance:

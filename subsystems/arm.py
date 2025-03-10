@@ -1,3 +1,4 @@
+import wpilib
 from commands2 import SubsystemBase, Command
 from phoenix6.hardware import TalonFX
 from phoenix6.configs import TalonFXConfiguration, Slot0Configs
@@ -17,6 +18,8 @@ class Arm(SubsystemBase):
 
         # Initialize motor
         self.motor = TalonFX(MOTOR_IDS["wrist"])
+
+        self.lock_servo = wpilib.Servo(0)
 
         # Configure motor
         configs = TalonFXConfiguration()
@@ -80,7 +83,6 @@ class Arm(SubsystemBase):
                 super().__init__()
                 self.arm = arm
                 self.ignore_min = _ignore_min
-                self.arm = arm
                 if self.ignore_min:
                     self.target_position = target_position
                 else:
@@ -116,7 +118,8 @@ class Arm(SubsystemBase):
                     print(f"///// ARM GTP T: {self.target_position} --CANCEL--")
                 self.arm.motor.setVoltage(0)
 
-                self.arm.sim_timer.reset()
+                # for testing
+                # self.arm.sim_timer.reset()
 
             def get_voltage(self):
                 const = CON_ARM["speed"]
@@ -125,14 +128,51 @@ class Arm(SubsystemBase):
                 v_min = const["v_min"]
                 v_max = const["v_max"]
                 pa_ratio = const["cp_to_acceleration_ratio"]
-                if cp >= tp:
-                    return 0
-                else:
-                    a = max(v_min, cp * pa_ratio)
-                    b = max(v_min, (tp - cp) * pa_ratio)
-                    return min(a, b, v_max) * const["v_calc_to_limit_ratio"]
+                dist_from_target = abs(tp - cp)
+                t_dir = 1
+                if cp > tp:
+                    t_dir = -1
+                a = max(v_min, cp * pa_ratio)
+                b = max(v_min, dist_from_target * pa_ratio)
+                return min(a, b, v_max) * const["v_calc_to_limit_ratio"] * t_dir
 
         return ArmMoveCommand(self, position, ignore_min, kp)
+
+
+    def lock(self, lock = False) -> Command:
+
+        class ArmLockCommand(Command):
+            def __init__(self, arm, lock):
+                super().__init__()
+                self.arm = arm
+                self.timer = wpilib.Timer()
+
+                self.target_angle = CON_ARM["lock"]["open"]
+
+                print(f"///// ARM LOCK T: {lock}")
+                if lock is True:
+                    self.target_angle = CON_ARM["lock"]["closed"]
+                self.addRequirements(arm)
+
+            def initialize(self):
+                # if not self.arm.is_holding_position:  # Only print when not holding
+                print(f"///// ARM LOCK T: {self.target_angle}")
+                self.arm.lock_servo.setAngle(self.target_angle)
+
+                self.timer.reset()
+                self.timer.start()
+
+            def execute(self):
+               pass
+
+
+            def isFinished(self):
+                return self.timer.hasElapsed(CON_ARM["lock"]["time_delay"])
+
+            def end(self, interrupted):
+               self.timer.stop()
+
+        return ArmLockCommand(self, lock)
 
     def manual(self, percentage_func: Callable[[], float], max_rpm: float = 300) -> Command:
 

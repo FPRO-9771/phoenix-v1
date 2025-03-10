@@ -110,7 +110,8 @@ class Elevator(SubsystemBase):
                     print(f"///// ELEV GTP T: {self.target_position} --CANCEL--")
                 self.elevator.motor.setVoltage(0)
 
-                self.elevator.sim_timer.reset()
+                # for testing
+                # self.elevator.sim_timer.reset()
 
             def get_voltage(self):
                 const = CON_ELEV["speed"]
@@ -119,12 +120,13 @@ class Elevator(SubsystemBase):
                 v_min = const["v_min"]
                 v_max = const["v_max"]
                 pa_ratio = const["cp_to_acceleration_ratio"]
-                if cp >= tp:
-                    return 0
-                else:
-                    a = max(v_min, cp * pa_ratio)
-                    b = max(v_min, (tp - cp) * pa_ratio)
-                    return min(a, b, v_max) * const["v_calc_to_limit_ratio"]
+                dist_from_target = abs(tp - cp)
+                t_dir = 1
+                if cp > tp:
+                    t_dir = -1
+                a = max(v_min, cp * pa_ratio)
+                b = max(v_min, dist_from_target * pa_ratio)
+                return min(a, b, v_max) * const["v_calc_to_limit_ratio"] * t_dir
 
         return ElevatorMoveCommand(self, position)
 

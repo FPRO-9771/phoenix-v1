@@ -60,6 +60,18 @@ class RobotContainer:
                 swerve.SwerveModule.DriveRequestType.OPEN_LOOP_VOLTAGE
             )
         )
+
+        self._drive_rc = (
+            swerve.requests.RobotCentric()
+            .with_deadband(self._max_speed * 0.1)
+            .with_rotational_deadband(
+                self._max_angular_rate * 0.1
+            )
+            .with_drive_request_type(
+                swerve.SwerveModule.DriveRequestType.OPEN_LOOP_VOLTAGE
+            )
+        )
+
         self._brake = swerve.requests.SwerveDriveBrake()
         self._point = swerve.requests.PointWheelsAt()
 
@@ -69,7 +81,7 @@ class RobotContainer:
 
         # Initiate command schedule functions for autonomous tasks
         self.auton_operator = AutonOperator(self.elevator, self.arm, self.shooter, self.climber)
-        self.auton_drive = AutonDrive(self.drivetrain, self._drive, self._max_speed, self._max_angular_rate,
+        self.auton_drive = AutonDrive(self.drivetrain, self._drive_rc, self._max_speed, self._max_angular_rate,
                                       self.limelight_handler)
 
         # Set up auton functions and dashboard selection
@@ -173,7 +185,7 @@ class RobotContainer:
 
         ctrl.rightBumper().onTrue(InstantCommand(lambda: CommandScheduler.getInstance().cancelAll()))
 
-        # ctrl.leftBumper().onTrue(self.auton_operator.hard_hold())
+        ctrl.leftBumper().onTrue(self.auton_operator.hard_hold())
 
         # Automated controls
         ctrl.a().onTrue(self.auton_operator.shoot(2))

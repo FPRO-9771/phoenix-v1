@@ -10,11 +10,23 @@ def create_auton_chooser(auton_drive, auton_operator):
     def timer():
         return auton_modes.test_timer_auto()
 
+    def ll_data():
+        return auton_modes.test_ll_data()
+
     def ll():
         return auton_modes.test_ll_auto()
 
-    chooser.setDefaultOption("Timer", timer)
+    def ap():
+        return auton_modes.test_pa_auto()
+
+    def sl():
+        return auton_modes.test_servo()
+
+    chooser.addOption("Timer", timer)
+    chooser.addOption("Limelight Data Only", ll_data)
     chooser.addOption("Limelight", ll)
+    chooser.addOption("Align Pipe", ap)
+    chooser.setDefaultOption("Shooter Lock", sl)
     # chooser.addOption("Timer", timer)
     # chooser.setDefaultOption("Limelight", ll)
 
