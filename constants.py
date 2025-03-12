@@ -58,6 +58,7 @@ CON_SHOOT = {
     "very_low": 2,
     "low": 2,
     "high": 5,
+    "shoot_duration_very_long": 1,
     "shoot_duration_long": 0.3,
     "shoot_duration": 0.3
 }

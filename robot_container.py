@@ -221,7 +221,7 @@ class RobotContainer:
 
         def auto_seek_and_shoot(direction: str):
             self.is_running = True
-            return self.auton_modes.seek_and_shoot(None)
+            return self.auton_modes.seek_and_shoot(None, direction)
 
         def auto_seek_and_shoot_end(ctrl):
             print(f"----------------!!!!!!!!!!!!! self.is_running {self.is_running}")

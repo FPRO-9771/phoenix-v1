@@ -160,6 +160,29 @@ class AutonOperator(SubsystemBase):
 
         return HardHoldSequence(self.elevator, self.arm)
 
+    def intake_with_shooter(self) -> Command:
+
+        class IntakeWithShooterSequence(SequentialCommandGroup):
+            def __init__(self, arm, shooter):
+                super().__init__()
+
+                self.arm = arm
+                self.shooter = shooter
+
+                arm_pos = CON_ARM["intake"]
+                arm_rotate_cmd = self.arm.go_to_position(arm_pos)
+                shot_strength = CON_SHOOT["high"]
+
+                # Shoot piece
+                shoot_piece_cmd = self.shooter.shoot(shot_strength, 'hold', None, "shoot_duration_very_long")
+
+                self.addCommands(
+                    arm_rotate_cmd,
+                    shoot_piece_cmd,
+                )
+
+        return IntakeWithShooterSequence(self.arm, self.shooter)
+
     def auton_simple_1(self) -> Command:
 
         class AutonSimple1Sequence(ParallelRaceGroup):

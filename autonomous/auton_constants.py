@@ -39,7 +39,7 @@ INSTRUCTIONS_A = {
         "moves": "right",
         "shot1": 22,
         "intake": 12,
-        "shot2": 14
+        "shot2": 17
     },
     "red_left": {
         "moves": "left",
@@ -54,58 +54,69 @@ INSTRUCTIONS_A = {
         "shot2": 8
     },
     "blue_center": {
-        "shot1": 0
+        "shot1": 21
     },
     "red_center": {
-        "shot1": 0
+        "shot1": 10
     }
 }
 
 INSTRUCTIONS_MOVES = {
     "left": {
         "move1": {
-            "speed_y": 2,
-            "time": 20,
+            "speed_y": -3,
+            "speed_x": 0,
+            "rotation": 0,
+            "time": 25,
         },
         "move2": {
-            "speed_x": 2,
-            "speed_y": 1,
-            "rotation": -2.5,
-            "time": 20,
+            "speed_x": 3,
+            "speed_y": 0,
+            "rotation": -4,
+            "time": 30,
         },
     },
     "right": {
         "move1": {
-            "speed_y": -2,
-            "time": 20,
+            "speed_y": 3,
+            "speed_x": 0,
+            "rotation": 0,
+            "time": 25,
         },
         "move2": {
-            "speed_x": 2,
-            "speed_y": -1,
-            "rotation": 2.5,
-            "time": 20,
+            "speed_x": -3,
+            "speed_y": 0,
+            "rotation": 4,
+            "time": 30,
         },
     },
     "approach": {
         "in": {
-            "speed_x": 0.6,
+            "speed_x": 2,
             "speed_y": 0,
             "rotation": 0,
-            "time": 100,
-            "sensor_stop_distance": 0.5
+            "time": 40,
+            "sensor_stop_distance": None
+        },
+        "in3": {
+            "speed_x": .8,
+            "speed_y": 0,
+            "rotation": 0,
+            "time": 60,
+            "sensor_stop_distance": None
         },
         "out1": {
             "speed_x": -2,
-            "speed_y": 0,
+            "speed_y": -1.5,
             "rotation": 0,
-            "time": 20,
+            "time": 30,
             "sensor_stop_distance": None
         },
         "out2": {
             "speed_x": 0,
             "speed_y": 0,
-            "rotation": 3,
-            "time": 20,
+            "rotation": -8,
+            "time": 25,
             "sensor_stop_distance": None
         },
     }
@@ -127,14 +138,14 @@ DRIVING = {
             "red": 1,
             "blue": -1
         },
-        "max": 2,
+        "max": 3,
         "multiplier": .5,
         "add_min": 0.5,
         "target_tolerance": 0.3,
-        "target_tolerance_intake": 4,
+        "target_tolerance_intake": 3,
         "reduce_when_close": {
-            "distance": 1,
-            "multiplier": 0.7,
+            "distance": 1.2,
+            "multiplier": 0.6,
             "max": 0.6
         },
         "no_spin_power": 0.5
@@ -170,7 +181,7 @@ DRIVING = {
         "engage_at_distance": 99,
         "reduce_when_close": {
             "distance": 2,
-            "multiplier": 1.5
+            "multiplier": .7
         },
         "no_spin_power": 0.5
     }
@@ -179,13 +190,13 @@ DRIVING = {
 CANRANGE = {
     "speed": 0.55,
     "right": {
-        "target": 0.40,
-        "bang": 0.45,
-        "max_time": 20
+        "target": 0.45,
+        "bang": 0.35,
+        "max_time": 22
     },
     "left": {
-        "target": 0.48,
+        "target": 0.49,
         "bang": 0.25,
-        "max_time": 30
+        "max_time": 22
     }
 }

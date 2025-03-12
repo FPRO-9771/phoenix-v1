@@ -9,11 +9,17 @@ def create_auton_chooser(auton_modes):
     def blue_left():
         return auton_modes.full_auton("blue_left")
 
+    def blue_center():
+        return auton_modes.full_auton("blue_center")
+
     def blue_right():
         return auton_modes.full_auton("blue_right")
 
     def red_left():
         return auton_modes.full_auton("red_left")
+
+    def red_center():
+        return auton_modes.full_auton("red_center")
 
     def red_right():
         return auton_modes.full_auton("red_right")
@@ -44,8 +50,10 @@ def create_auton_chooser(auton_modes):
         return auton_modes.test_auton()
 
     chooser.addOption("Blue Left", blue_left)
+    chooser.addOption("Blue Center", blue_center)
     chooser.addOption("Blue Right", blue_right)
     chooser.addOption("Red Left", red_left)
+    chooser.addOption("Red Center", red_center)
     chooser.addOption("Red Right", red_right)
     chooser.addOption("Seek and Shoot 11", seek_and_shoot_11)
     # chooser.setDefaultOption("Seek and Shoot closest", seek_and_shoot)

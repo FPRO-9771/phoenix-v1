@@ -198,7 +198,7 @@ class AutonDrive(SubsystemBase):
                 # self.addRequirements(outer_self.drivetrain)
 
             def initialize(self):
-                print(f"+++++ AUTON DR limelight I")
+                print(f"+++++ AUTON DR limelight I target: {self.target_tag_id}")
 
             def execute(self):
 
@@ -311,6 +311,7 @@ class AutonDrive(SubsystemBase):
                 self.color = "red"
                 self.distance = 0
                 self.periodic_counter = 0
+                self.banging = False
 
                 direction_opp = ('right' if _direction == 'left' else 'left')
                 self.direction = _direction
@@ -350,7 +351,7 @@ class AutonDrive(SubsystemBase):
                 self.periodic_counter += 1
 
                 d_raw = self.sensor["device"].get_distance().value
-                d_avg = self.getAvgReading(d_raw)
+                d_avg = self.outer_self.get_avg_reading(self.sensor, d_raw)
 
                 speed_y_base = CANRANGE["speed"] * self.direction_multiplier
 
@@ -360,7 +361,7 @@ class AutonDrive(SubsystemBase):
 
                 if self.move is True:
                     if self.error < CANRANGE[self.direction]["bang"]:
-                        # print(f"+++++ AUTON DR bang bang")
+                        self.banging = True
                         speed_y = self.outer_self._bang_bang_control(self.periodic_counter, self.error, speed_y_base)
                     else:
                         speed_y = speed_y_base
@@ -379,19 +380,22 @@ class AutonDrive(SubsystemBase):
 
             def isFinished(self):
                 if self.move is True:
-                    return self.error <= 0 or self.periodic_counter > CANRANGE[self.direction]["max_time"]
+                    return (self.error <= 0 or
+                            ( self.banging is False and self.periodic_counter > CANRANGE[self.direction]["max_time"]))
                 else:
                     return False
 
-            def getAvgReading(self, new_range):
-                if "d_range" not in self.sensor: self.sensor["d_range"] = []
-                self.sensor["d_range"].append(new_range)
-                if len(self.sensor["d_range"]) > 3:
-                    self.sensor["d_range"].pop(0)
-                return sum(self.sensor["d_range"]) / len(self.sensor["d_range"])
-
         # Create and return the command
         return AlignPipeCommand(self, direction, move)
+
+    def get_avg_reading(self, sensor, new_range):
+        if "d_range" not in sensor: sensor["d_range"] = []
+        sensor["d_range"].append(new_range)
+        if len(sensor["d_range"]) < 3:
+            return 1
+        if len(sensor["d_range"]) > 3:
+            sensor["d_range"].pop(0)
+        return sum(sensor["d_range"]) / len(sensor["d_range"])
 
     def _bang_bang_control(self, periodic_counter, error, speed_y_base):
 
@@ -415,10 +419,14 @@ class AutonDrive(SubsystemBase):
                 self.rotation = _rotation
                 self.time = _time
                 self.sensor_stop_distance = _sensor_stop_distance
+
+                self.sensor = self.outer_self.sensors["left"]
+
                 # self.addRequirements(outer_self.drivetrain)
 
             def initialize(self):
                 print(f"+++++ AUTON DR drive_with_instructions I")
+                self.sensor["d_range"] = []
 
             def execute(self):
 
@@ -436,10 +444,10 @@ class AutonDrive(SubsystemBase):
             def isFinished(self):
                 distance_reached = False
                 if self.sensor_stop_distance:
-                    sensor = self.outer_self.sensors["right"]
-                    d_raw = sensor["device"].get_distance().value
-                    print(f"+++++ AUTON DR drive_with_instructions d_raw {d_raw:.2f}")
-                    distance_reached = d_raw < self.sensor_stop_distance
+                    d_raw = self.sensor["device"].get_distance().value
+                    d_avg = self.outer_self.get_avg_reading(self.sensor, d_raw)
+                    print(f"+++++ AUTON DR drive_with_instructions d_raw {d_avg:.2f}")
+                    distance_reached = d_avg < self.sensor_stop_distance
 
                 return self.periodic_counter > self.time or distance_reached
 
