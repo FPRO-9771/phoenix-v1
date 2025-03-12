@@ -31,7 +31,7 @@ INSTRUCTIONS = {
 INSTRUCTIONS_A = {
     "blue_left": {
         "shot1": 20,
-        "rotate1": -3.5,
+        "rotate1": -2.5,
         "intake": 13,
         "shot2": 19
     },
@@ -43,7 +43,7 @@ INSTRUCTIONS_A = {
     },
     "red_left": {
         "shot1": 11,
-        "rotate1": -3.5,
+        "rotate1": -2.5,
         "intake": 1,
         "shot2": 6
     },
@@ -75,6 +75,7 @@ DRIVING = {
         "multiplier": .5,
         "add_min": 0.5,
         "target_tolerance": 0.3,
+        "target_tolerance_intake": 4,
         "reduce_when_close": {
             "distance": 1,
             "multiplier": 0.7,

@@ -26,7 +26,7 @@ def create_auton_chooser(auton_modes):
     #     return auton_modes.test_timer_auto()
     #
     def ll_data():
-        return auton_modes.test_ll_data(6)
+        return auton_modes.test_ll_data(11)
 
     def ap_no_move():
         return auton_modes.align_pipe_debug()

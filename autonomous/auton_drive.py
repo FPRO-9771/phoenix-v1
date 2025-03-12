@@ -109,7 +109,7 @@ class AutonDrive(SubsystemBase):
 
             def execute(self):
 
-                # print(f"+++++ AUTON DR limelight ::: Seeking")
+                print(f"+++++ AUTON DR limelight ::: Seeking")
                 result = self.outer_self.limelight_handler.get_target_data(self.target_tag_id)
                 if result:
                     # print(f"+++++ AUTON DR limelight ::: >> Found <<")
@@ -157,16 +157,17 @@ class AutonDrive(SubsystemBase):
         # Create and return the command
         return LimelightCommand(self, target_tag_id)
 
-    def limelight(self, target_tag_id=None) -> Command:
+    def limelight(self, target_tag_id=None, intake=False) -> Command:
         """
         Creates a command that turns the robot until the simulated target distance is 1.0.
         """
 
         class LimelightCommand(Command):
-            def __init__(self, outer_self, _target_tag_id):
+            def __init__(self, outer_self, _target_tag_id, _intake):
                 super().__init__()
                 self.outer_self = outer_self
                 self.target_tag_id = _target_tag_id
+                self.intake = _intake
                 self.on_target = False
                 self.color = "red"
                 self.distance = None
@@ -229,10 +230,20 @@ class AutonDrive(SubsystemBase):
 
             def calculate_drive_variable(self, v_type, v_input):
                 const = DRIVING[v_type]
+                target_tolerance = None
+
+                if v_type == 'speed_x' and self.intake is True:
+                    target_tolerance = const["target_tolerance_intake"]
+                else:
+                    target_tolerance = const["target_tolerance"]
+
+                if v_type == 'speed_x':
+                    print(f"+++++ AUTON DR target_tolerance {target_tolerance}")
+
                 if "engage_at_distance" in const:
                     if const["engage_at_distance"] < self.distance:
                         return 0
-                if abs(v_input) < const["target_tolerance"]:
+                if abs(v_input) < target_tolerance:
                     return 0
 
                 v_max = const["max"]
@@ -264,7 +275,7 @@ class AutonDrive(SubsystemBase):
                     return False
 
         # Create and return the command
-        return LimelightCommand(self, target_tag_id)
+        return LimelightCommand(self, target_tag_id, intake)
 
     def align_pipe(self, direction='left', move=True) -> Command:
         """
@@ -377,7 +388,6 @@ class AutonDrive(SubsystemBase):
             def __init__(self, outer_self, _rotation_speed):
                 super().__init__()
                 self.outer_self = outer_self
-                self.rotation_speed = _rotation_speed
                 self.periodic_counter = 0
                 self.speed_x = -1
                 self.speed_y = 0
@@ -405,6 +415,43 @@ class AutonDrive(SubsystemBase):
 
         # Create and return the command
         return BackAndRotateCommand(self, rotation_speed)
+
+    def forward(self) -> Command:
+        """
+        Creates a command that turns the robot until the simulated target distance is 1.0.
+        """
+
+        class BackAndRotateCommand(Command):
+            def __init__(self, outer_self):
+                super().__init__()
+                self.outer_self = outer_self
+                self.periodic_counter = 0
+                self.speed_x = 3
+                self.speed_y = 0
+                self.rotation = 0
+                # self.addRequirements(outer_self.drivetrain)
+
+            def initialize(self):
+                print(f"+++++ AUTON DR forward I")
+
+            def execute(self):
+
+                self.periodic_counter += 1
+                self.outer_self._drive_robot(self.rotation, self.speed_x, self.speed_y)
+
+            def end(self, interrupted):
+                if interrupted:
+                    print(f"+++++ AUTON DR forward Interrupted")
+                else:
+                    print(f"+++++ AUTON DR forward End")
+
+                self.outer_self._drive_robot(0, 0.5, 0)
+
+            def isFinished(self):
+                return self.periodic_counter > 30
+
+        # Create and return the command
+        return BackAndRotateCommand(self)
 
     def _drive_robot(self, rotation=0, x=0, y=0):
 

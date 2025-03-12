@@ -52,16 +52,22 @@ class AutonModes(SubsystemBase):
                     auton_operator.shoot(4, False)
                 )
 
-                back_away_1 = ParallelCommandGroup(
+                move_towards_intake_drive = SequentialCommandGroup(
+                    auton_drive.back_and_rotate(const["rotate1"]),
+                    auton_drive.forward(),
+                )
+
+                move_towards_intake = ParallelCommandGroup(
                     auton_operator.intake(),
-                    auton_drive.back_and_rotate(const["rotate1"])
+                    move_towards_intake_drive
                 )
 
                 full_cmd_set = [
                     auton_drive.limelight(const["shot1"]),
                     get_ready_to_shoot,
                     auton_operator.shoot(4, True, False),
-                    back_away_1
+                    move_towards_intake,
+                    auton_drive.limelight(const["intake"], True)
                 ]
 
                 self.addCommands(*full_cmd_set)
