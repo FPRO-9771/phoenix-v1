@@ -1,7 +1,8 @@
 from commands2 import SubsystemBase, Command, CommandScheduler, WaitCommand, SequentialCommandGroup, InstantCommand, \
     ParallelCommandGroup
 
-from autonomous.auton_constants import INSTRUCTIONS_A
+from autonomous.auton_constants import INSTRUCTIONS_A, INSTRUCTIONS_MOVES
+
 
 class AutonModes(SubsystemBase):
 
@@ -36,13 +37,16 @@ class AutonModes(SubsystemBase):
 
         return AutoSequence(self.auton_drive, self.auton_operator, target_tag_id)
 
-
     def full_auton(self, setting) -> Command:
         class AutoSequence(SequentialCommandGroup):
             def __init__(self, auton_drive, auton_operator):
                 super().__init__()
 
                 const = INSTRUCTIONS_A[setting]
+                moves = INSTRUCTIONS_MOVES[const["moves"]]
+                appr_in = INSTRUCTIONS_MOVES["approach"]["in"]
+                appr_out1 = INSTRUCTIONS_MOVES["approach"]["out1"]
+                appr_out2 = INSTRUCTIONS_MOVES["approach"]["out2"]
 
                 self.auton_drive = auton_drive
                 self.auton_operator = auton_operator
@@ -53,8 +57,13 @@ class AutonModes(SubsystemBase):
                 )
 
                 move_towards_intake_drive = SequentialCommandGroup(
-                    auton_drive.back_and_rotate(const["rotate1"]),
-                    auton_drive.forward(),
+                    auton_drive.drive_with_instructions(
+                        0, moves['move1']['speed_y'], 0, moves['move1']['time'], None
+                    ),
+                    auton_drive.drive_with_instructions(
+                        moves['move2']['speed_x'], moves['move2']['speed_y'], moves['move2']['rotate'],
+                        moves['move2']['time'], None
+                    ),
                 )
 
                 move_towards_intake = ParallelCommandGroup(
@@ -62,18 +71,41 @@ class AutonModes(SubsystemBase):
                     move_towards_intake_drive
                 )
 
-                full_cmd_set = [
+                shot_1_cmd_set = [
                     auton_drive.limelight(const["shot1"]),
                     get_ready_to_shoot,
                     auton_operator.shoot(4, True, False),
-                    move_towards_intake,
-                    auton_drive.limelight(const["intake"], True)
                 ]
+
+                following_cmd_set = [
+                    move_towards_intake,
+                    auton_drive.limelight(const["intake"], True),
+                    auton_drive.drive_with_instructions(
+                        appr_in["speed_x"], appr_in["speed_y"], appr_in["rotation"], appr_in["time"],
+                        appr_in["sensor_stop_distance"]
+                    ),
+                    auton_drive.drive_with_instructions(
+                        appr_out1["speed_x"], appr_out1["speed_y"], appr_out1["rotation"], appr_out1["time"],
+                        appr_out1["sensor_stop_distance"]
+                    ),
+                    auton_drive.drive_with_instructions(
+                        appr_out2["speed_x"], appr_out2["speed_y"], appr_out2["rotation"], appr_out2["time"],
+                        appr_out2["sensor_stop_distance"]
+                    ),
+                    auton_drive.limelight(const["shot2"]),
+                    get_ready_to_shoot,
+                    auton_operator.shoot(4, True, False),
+                ]
+
+                full_cmd_set = shot_1_cmd_set.copy()
+
+                # Conditionally add the following command set if "intake" exists in const
+                if "intake" in const:
+                    full_cmd_set.extend(following_cmd_set)
 
                 self.addCommands(*full_cmd_set)
 
         return AutoSequence(self.auton_drive, self.auton_operator)
-
 
     def align_pipe_debug(self, move=False, direction='left') -> Command:
 

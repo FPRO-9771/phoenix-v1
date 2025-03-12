@@ -21,6 +21,27 @@ class AutonDrive(SubsystemBase):
 
         self.limelight_handler = limelight_handler
 
+        self.sensors = {
+            "right": {
+                "device": CANrange(42)
+            },
+            "left": {
+                "device": CANrange(41)
+            }
+        }
+
+        range_config = CANrangeConfiguration()
+        tof_params = ToFParamsConfigs()
+        range_config.with_to_f_params(tof_params)
+        fov_params = FovParamsConfigs()
+        fov_params.with_fov_range_x(7)
+        fov_params.with_fov_range_y(7)
+        range_config.with_fov_params(fov_params)
+
+        # Apply configuration
+        self.sensors["right"]["device"].configurator.apply(range_config)
+        self.sensors["left"]["device"].configurator.apply(range_config)
+
     def approach_target(self) -> Command:
         """
         Creates a command that turns the robot until the simulated target distance is 1.0.
@@ -232,7 +253,7 @@ class AutonDrive(SubsystemBase):
                 const = DRIVING[v_type]
                 target_tolerance = None
 
-                if v_type == 'speed_x' and self.intake is True:
+                if self.intake is True:
                     target_tolerance = const["target_tolerance_intake"]
                 else:
                     target_tolerance = const["target_tolerance"]
@@ -295,29 +316,29 @@ class AutonDrive(SubsystemBase):
                 self.direction = _direction
                 self.direction_multiplier = (1 if _direction == 'left' else -1)
                 self.move = _move
+                #
+                # self.sensors = {
+                #     "right": {
+                #         "device": CANrange(42)
+                #     },
+                #     "left": {
+                #         "device": CANrange(41)
+                #     }
+                # }
+                #
+                # range_config = CANrangeConfiguration()
+                # tof_params = ToFParamsConfigs()
+                # range_config.with_to_f_params(tof_params)
+                # fov_params = FovParamsConfigs()
+                # fov_params.with_fov_range_x(7)
+                # fov_params.with_fov_range_y(7)
+                # range_config.with_fov_params(fov_params)
+                #
+                # # Apply configuration
+                # self.sensors["right"]["device"].configurator.apply(range_config)
+                # self.sensors["left"]["device"].configurator.apply(range_config)
 
-                self.sensors = {
-                    "right": {
-                        "device": CANrange(42)
-                    },
-                    "left": {
-                        "device": CANrange(41)
-                    }
-                }
-
-                range_config = CANrangeConfiguration()
-                tof_params = ToFParamsConfigs()
-                range_config.with_to_f_params(tof_params)
-                fov_params = FovParamsConfigs()
-                fov_params.with_fov_range_x(7)
-                fov_params.with_fov_range_y(7)
-                range_config.with_fov_params(fov_params)
-
-                # Apply configuration
-                self.sensors["right"]["device"].configurator.apply(range_config)
-                self.sensors["left"]["device"].configurator.apply(range_config)
-
-                self.sensor = self.sensors[direction_opp]
+                self.sensor = self.outer_self.sensors[direction_opp]
 
                 self.raw_distance = None
 
@@ -379,23 +400,25 @@ class AutonDrive(SubsystemBase):
         else:
             return 0
 
-    def back_and_rotate(self, rotation_speed:float) -> Command:
+    def drive_with_instructions(self, speed_x:float, speed_y:float, rotation:float, time:int, sensor_stop_distance:float) -> Command:
         """
         Creates a command that turns the robot until the simulated target distance is 1.0.
         """
 
         class BackAndRotateCommand(Command):
-            def __init__(self, outer_self, _rotation_speed):
+            def __init__(self, outer_self, _speed_x, _speed_y, _rotation, _time, _sensor_stop_distance):
                 super().__init__()
                 self.outer_self = outer_self
                 self.periodic_counter = 0
-                self.speed_x = -1
-                self.speed_y = 0
-                self.rotation = _rotation_speed
+                self.speed_x = _speed_x
+                self.speed_y = _speed_y
+                self.rotation = _rotation
+                self.time = _time
+                self.sensor_stop_distance = _sensor_stop_distance
                 # self.addRequirements(outer_self.drivetrain)
 
             def initialize(self):
-                print(f"+++++ AUTON DR limelight I")
+                print(f"+++++ AUTON DR drive_with_instructions I")
 
             def execute(self):
 
@@ -404,54 +427,24 @@ class AutonDrive(SubsystemBase):
 
             def end(self, interrupted):
                 if interrupted:
-                    print(f"+++++ AUTON DR back_and_rotate Interrupted")
+                    print(f"+++++ AUTON DR drive_with_instructions Interrupted")
                 else:
-                    print(f"+++++ AUTON DR back_and_rotate End")
+                    print(f"+++++ AUTON DR drive_with_instructions End")
 
                 self.outer_self._drive_robot(0, 0, 0)
 
             def isFinished(self):
-                return self.periodic_counter > 20
+                distance_reached = False
+                if self.sensor_stop_distance:
+                    sensor = self.outer_self.sensors["right"]
+                    d_raw = sensor["device"].get_distance().value
+                    print(f"+++++ AUTON DR drive_with_instructions d_raw {d_raw:.2f}")
+                    distance_reached = d_raw < self.sensor_stop_distance
+
+                return self.periodic_counter > self.time or distance_reached
 
         # Create and return the command
-        return BackAndRotateCommand(self, rotation_speed)
-
-    def forward(self) -> Command:
-        """
-        Creates a command that turns the robot until the simulated target distance is 1.0.
-        """
-
-        class BackAndRotateCommand(Command):
-            def __init__(self, outer_self):
-                super().__init__()
-                self.outer_self = outer_self
-                self.periodic_counter = 0
-                self.speed_x = 3
-                self.speed_y = 0
-                self.rotation = 0
-                # self.addRequirements(outer_self.drivetrain)
-
-            def initialize(self):
-                print(f"+++++ AUTON DR forward I")
-
-            def execute(self):
-
-                self.periodic_counter += 1
-                self.outer_self._drive_robot(self.rotation, self.speed_x, self.speed_y)
-
-            def end(self, interrupted):
-                if interrupted:
-                    print(f"+++++ AUTON DR forward Interrupted")
-                else:
-                    print(f"+++++ AUTON DR forward End")
-
-                self.outer_self._drive_robot(0, 0.5, 0)
-
-            def isFinished(self):
-                return self.periodic_counter > 30
-
-        # Create and return the command
-        return BackAndRotateCommand(self)
+        return BackAndRotateCommand(self, speed_x, speed_y, rotation, time, sensor_stop_distance)
 
     def _drive_robot(self, rotation=0, x=0, y=0):
 

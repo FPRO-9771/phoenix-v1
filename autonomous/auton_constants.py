@@ -30,28 +30,84 @@ INSTRUCTIONS = {
 
 INSTRUCTIONS_A = {
     "blue_left": {
+        "moves": "left",
         "shot1": 20,
-        "rotate1": -2.5,
         "intake": 13,
         "shot2": 19
     },
     "blue_right": {
+        "moves": "right",
         "shot1": 22,
-        "rotate1": 3.5,
         "intake": 12,
         "shot2": 14
     },
     "red_left": {
+        "moves": "left",
         "shot1": 11,
-        "rotate1": -2.5,
         "intake": 1,
         "shot2": 6
     },
     "red_right": {
+        "moves": "right",
         "shot1": 9,
-        "rotate1": 3,
         "intake": 2,
         "shot2": 8
+    },
+    "blue_center": {
+        "shot1": 0
+    },
+    "red_center": {
+        "shot1": 0
+    }
+}
+
+INSTRUCTIONS_MOVES = {
+    "left": {
+        "move1": {
+            "speed_y": 2,
+            "time": 20,
+        },
+        "move2": {
+            "speed_x": 2,
+            "speed_y": 1,
+            "rotation": -2.5,
+            "time": 20,
+        },
+    },
+    "right": {
+        "move1": {
+            "speed_y": -2,
+            "time": 20,
+        },
+        "move2": {
+            "speed_x": 2,
+            "speed_y": -1,
+            "rotation": 2.5,
+            "time": 20,
+        },
+    },
+    "approach": {
+        "in": {
+            "speed_x": 0.6,
+            "speed_y": 0,
+            "rotation": 0,
+            "time": 100,
+            "sensor_stop_distance": 0.5
+        },
+        "out1": {
+            "speed_x": -2,
+            "speed_y": 0,
+            "rotation": 0,
+            "time": 20,
+            "sensor_stop_distance": None
+        },
+        "out2": {
+            "speed_x": 0,
+            "speed_y": 0,
+            "rotation": 3,
+            "time": 20,
+            "sensor_stop_distance": None
+        },
     }
 }
 
@@ -92,6 +148,7 @@ DRIVING = {
         "multiplier": 0.4,
         "add_min": 0,
         "target_tolerance": 0.5,
+        "target_tolerance_intake": 0.2,
         "engage_at_distance": 99,
         "reduce_when_close": {
             "distance": 1.5,
@@ -109,6 +166,7 @@ DRIVING = {
         "multiplier": 0.2,
         "add_min": 0.4,
         "target_tolerance": 0.08,
+        "target_tolerance_intake": 0.04,
         "engage_at_distance": 99,
         "reduce_when_close": {
             "distance": 2,
