@@ -48,9 +48,9 @@ CON_ARM = {
         "v_calc_to_limit_ratio": 0.5
     },
     "lock": {
-        "open": 155,
-        "closed": 175,
-        "time_delay": 0.5
+        "open": 0,
+        "closed": 0,
+        "time_delay": 0
     }
 }
 

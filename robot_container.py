@@ -1,3 +1,5 @@
+from difflib import restore
+
 from wpilib.event import EventLoop
 from wpilib import SmartDashboard, SendableChooser, DriverStation
 
@@ -22,6 +24,7 @@ from subsystems.climber import Climber
 from autonomous.auton_operator import AutonOperator
 from autonomous.auton_drive import AutonDrive
 
+from autonomous.auton_modes import AutonModes
 from autonomous.auton_mode_selector import create_auton_chooser
 
 from handlers.limelight_handler import LimelightHandler
@@ -85,10 +88,15 @@ class RobotContainer:
                                       self.limelight_handler)
 
         self.robot_centric = False
+        self.default_command = None
+
+        self.auton_modes = AutonModes(self.auton_drive, self.auton_operator)
 
         # Set up auton functions and dashboard selection
         self.chooser = SendableChooser()
-        self.chooser = create_auton_chooser(self.auton_drive, self.auton_operator)
+        self.chooser = create_auton_chooser(self.auton_modes)
+
+        self.is_running = False
 
     def setup_teleop(self):
         # Telemetry
@@ -108,10 +116,9 @@ class RobotContainer:
         self.configure_driver_controls()
         self.configure_operator_controls()
 
-    def configure_driver_controls(self):
-        """Configure driver controller bindings (driving and vision)."""
+    def set_default_command(self, ctrl):
 
-        ctrl = self.controller_driver
+        CommandScheduler.getInstance().cancelAll()
 
         # Drivetrain default command
         self.drivetrain.setDefaultCommand(
@@ -130,6 +137,34 @@ class RobotContainer:
                 )
             )
         )
+
+        print("------------ Default command has been set")
+
+    def configure_driver_controls(self):
+        """Configure driver controller bindings (driving and vision)."""
+
+        ctrl = self.controller_driver
+
+        self.set_default_command(ctrl)
+        # # Drivetrain default command
+        # self.drivetrain.setDefaultCommand(
+        #     # Drivetrain will execute this command periodically
+        #     self.drivetrain.apply_request(
+        #         lambda: (
+        #             self._drive.with_velocity_x(
+        #                 -ctrl.getLeftY() * self._max_speed * self.speed_ratio
+        #             )  # Drive forward with negative Y (forward)
+        #             .with_velocity_y(
+        #                 -ctrl.getLeftX() * self._max_speed * self.speed_ratio
+        #             )  # Drive left with negative X (left)
+        #             .with_rotational_rate(
+        #                 -ctrl.getRightX() * self._max_angular_rate * self.rotation_ratio
+        #             )  # Drive counterclockwise with negative X (left)
+        #         )
+        #     )
+        # )
+
+        self.default_command = self.drivetrain.getDefaultCommand()
 
         ctrl.a().whileTrue(self.drivetrain.apply_request(lambda: self._brake))
         ctrl.b().whileTrue(
@@ -160,6 +195,10 @@ class RobotContainer:
             self.drivetrain.runOnce(lambda: self.toggle_robot_centric())
         )
 
+        ctrl.back().onTrue(
+            self.drivetrain.runOnce(lambda: self.drivetrain.seed_field_centric())
+        )
+
         self.drivetrain.register_telemetry(
             lambda state: self._logger.telemeterize(state)
         )
@@ -172,10 +211,42 @@ class RobotContainer:
             InstantCommand(lambda: self.set_speed_ratio(1))
         )
 
+        # restore_default = InstantCommand(
+        #     lambda: CommandScheduler.getInstance().setDefaultCommand(
+        #         self.drivetrain, self.default_command
+        #     )
+        # )
+        #
+
+
+        def auto_seek_and_shoot(direction: str):
+            self.is_running = True
+            return self.auton_modes.seek_and_shoot(None)
+
+        def auto_seek_and_shoot_end(ctrl):
+            print(f"----------------!!!!!!!!!!!!! self.is_running {self.is_running}")
+            self.is_running = False
+            return InstantCommand(lambda: self.set_default_command(ctrl))
+
         Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
-            self.shooter.manual(lambda: ctrl.getHID().getLeftTriggerAxis())
+            auto_seek_and_shoot('left')
+            # self.auton_modes.seek_and_shoot(None, 'left')
         )
 
+        Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).onFalse(
+            auto_seek_and_shoot_end(ctrl)
+            # InstantCommand(lambda: self.set_default_command(ctrl))
+        )
+
+        Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).whileTrue(
+            auto_seek_and_shoot('right')
+            # self.auton_modes.seek_and_shoot(None, 'left')
+        )
+
+        Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).onFalse(
+            auto_seek_and_shoot_end(ctrl)
+            # InstantCommand(lambda: self.set_default_command(ctrl))
+        )
 
     def toggle_robot_centric(self):
 
@@ -213,15 +284,23 @@ class RobotContainer:
             if self.shooter.getCurrentCommand():
                 self.shooter.getCurrentCommand().cancel()
 
+        def safe_operator(action: str, level: int):
+            print(f"----------------!!!!!!!!!!!!! self.is_running {self.is_running}")
+            if self.is_running is False:
+                if action == 'shoot':
+                    return self.auton_operator.shoot(level)
+                if action == 'intake':
+                    return self.auton_operator.intake()
+
         ctrl.rightBumper().onTrue(InstantCommand(lambda: CommandScheduler.getInstance().cancelAll()))
 
         ctrl.leftBumper().onTrue(self.auton_operator.hard_hold())
 
         # Automated controls
-        ctrl.a().onTrue(self.auton_operator.shoot(2))
-        ctrl.x().onTrue(self.auton_operator.shoot(3))
-        ctrl.y().onTrue(self.auton_operator.shoot(4))
-        ctrl.b().onTrue(self.auton_operator.intake())
+        ctrl.a().onTrue(safe_operator('shoot', 2))
+        ctrl.x().onTrue(safe_operator('shoot', 3))
+        ctrl.y().onTrue(safe_operator('shoot', 4))
+        ctrl.b().onTrue(safe_operator('intake', 0))
 
         # # Automated controls with pre-cancellation
         # ctrl.a().onTrue(SequentialCommandGroup(
@@ -237,8 +316,8 @@ class RobotContainer:
         #     InstantCommand(cancel_subsystem_commands),
         #     self.auton_operator.intake()))
 
-        ctrl.back().whileTrue(self.climber.manual(lambda: 0.2))
-        ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
+        # ctrl.back().whileTrue(self.climber.manual(lambda: 0.2))
+        # ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
 
         # Manual controls with buttons
         Trigger(lambda: abs(ctrl.getHID().getLeftY()) > 0.1).whileTrue(

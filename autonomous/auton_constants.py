@@ -24,7 +24,34 @@ INSTRUCTIONS = {
             "red": -0.7,
             "blue": 0.7,
         },
-        "drive1_timeout":3.5,
+        "drive1_timeout": 3.5,
+    }
+}
+
+INSTRUCTIONS_A = {
+    "blue_left": {
+        "shot1": 20,
+        "rotate1": -3.5,
+        "intake": 13,
+        "shot2": 19
+    },
+    "blue_right": {
+        "shot1": 22,
+        "rotate1": 3.5,
+        "intake": 12,
+        "shot2": 14
+    },
+    "red_left": {
+        "shot1": 11,
+        "rotate1": -3.5,
+        "intake": 1,
+        "shot2": 6
+    },
+    "red_right": {
+        "shot1": 9,
+        "rotate1": 3,
+        "intake": 2,
+        "shot2": 8
     }
 }
 
@@ -87,5 +114,19 @@ DRIVING = {
             "multiplier": 1.5
         },
         "no_spin_power": 0.5
+    }
+}
+
+CANRANGE = {
+    "speed": 0.55,
+    "right": {
+        "target": 0.40,
+        "bang": 0.45,
+        "max_time": 20
+    },
+    "left": {
+        "target": 0.48,
+        "bang": 0.25,
+        "max_time": 30
     }
 }

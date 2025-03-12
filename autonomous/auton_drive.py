@@ -5,7 +5,7 @@ from phoenix6.hardware import CANrange
 from phoenix6.configs import TalonFXConfiguration, Slot0Configs, CANrangeConfiguration
 from phoenix6.configs.config_groups import ToFParamsConfigs, FovParamsConfigs
 
-from autonomous.auton_constants import DRIVING, LL_DATA_SETTINGS
+from autonomous.auton_constants import DRIVING, LL_DATA_SETTINGS, CANRANGE
 
 
 class AutonDrive(SubsystemBase):
@@ -110,7 +110,7 @@ class AutonDrive(SubsystemBase):
             def execute(self):
 
                 # print(f"+++++ AUTON DR limelight ::: Seeking")
-                result = self.outer_self.limelight_handler.get_target_data(target_tag_id)
+                result = self.outer_self.limelight_handler.get_target_data(self.target_tag_id)
                 if result:
                     # print(f"+++++ AUTON DR limelight ::: >> Found <<")
                     # print(f"+++++ AUTON DR limelight ::: >> ID  : {result["tag_id"]} "
@@ -124,7 +124,11 @@ class AutonDrive(SubsystemBase):
                     print(f"+++++ AUTON DR limel_map ::: // ID  : {result["tag_id"]} "
                           f" Or Y: {mapped["yaw"]:.3f}  "
                           f" tx  : {mapped["tx"]:.3f}  "
-                          f" Dist: {mapped["distance"]:.3f}   //")
+                          f" Dist: {mapped["distance"]:.3f}   "
+                          f" Targ: {self.target_tag_id}//")
+
+                    if self.target_tag_id is not None and mapped["id"] != self.target_tag_id:
+                        self.on_target = True
 
             def end(self, interrupted):
                 if interrupted:
@@ -177,14 +181,19 @@ class AutonDrive(SubsystemBase):
             def execute(self):
 
                 # print(f"+++++ AUTON DR limelight ::: Seeking")
-                result = self.outer_self.limelight_handler.get_target_data(target_tag_id)
+                result = self.outer_self.limelight_handler.get_target_data(self.target_tag_id)
                 if result:
+
                     mapped = result["mapped"]
                     # print(f"+++++ AUTON DR limelight ::: >> Found <<")
                     # print(f"+++++ AUTON DR limelight ::: >> ID  : {result["tag_id"]} "
                     #       f" Or Y: {mapped["yaw"]:.3f}  "
                     #       f" tx  : {mapped["tx"]:.3f}  "
                     #       f" Dist: {mapped["distance"]:.3f}   <<")
+
+                    if self.target_tag_id is not None and mapped["id"] != self.target_tag_id:
+                        self.on_target = True
+                        return
 
                     self.distance = mapped["distance"]
                     # self.speed_x = 0
@@ -257,38 +266,47 @@ class AutonDrive(SubsystemBase):
         # Create and return the command
         return LimelightCommand(self, target_tag_id)
 
-    def align_pipe(self, direction: str) -> Command:
+    def align_pipe(self, direction='left', move=True) -> Command:
         """
         Creates a command that turns the robot until the simulated target distance is 1.0.
         """
 
         class AlignPipeCommand(Command):
-            def __init__(self, outer_self, _direction='left'):
+            def __init__(self, outer_self, _direction, _move):
                 super().__init__()
                 self.outer_self = outer_self
-                self.direction = (1 if _direction == 'left' else -1)
                 self.on_target = False
                 self.color = "red"
                 self.distance = 0
                 self.periodic_counter = 0
-                # self.addRequirements(outer_self.drivetrain)
 
-                self.range_sensor = CANrange(41)
+                direction_opp = ('right' if _direction == 'left' else 'left')
+                self.direction = _direction
+                self.direction_multiplier = (1 if _direction == 'left' else -1)
+                self.move = _move
 
-                # Configure range sensor
+                self.sensors = {
+                    "right": {
+                        "device": CANrange(42)
+                    },
+                    "left": {
+                        "device": CANrange(41)
+                    }
+                }
+
                 range_config = CANrangeConfiguration()
-
-                # Configure TOF (Time of Flight) parameters
                 tof_params = ToFParamsConfigs()
-                # You might need to adjust these based on your needs
                 range_config.with_to_f_params(tof_params)
-
-                # Configure FOV (Field of View) parameters
                 fov_params = FovParamsConfigs()
+                fov_params.with_fov_range_x(7)
+                fov_params.with_fov_range_y(7)
                 range_config.with_fov_params(fov_params)
 
                 # Apply configuration
-                self.range_sensor.configurator.apply(range_config)
+                self.sensors["right"]["device"].configurator.apply(range_config)
+                self.sensors["left"]["device"].configurator.apply(range_config)
+
+                self.sensor = self.sensors[direction_opp]
 
                 self.raw_distance = None
 
@@ -299,21 +317,25 @@ class AutonDrive(SubsystemBase):
 
                 self.periodic_counter += 1
 
-                self.raw_distance = self.range_sensor.get_distance().value
+                d_raw = self.sensor["device"].get_distance().value
+                d_avg = self.getAvgReading(d_raw)
 
-                dead_zone = 0.02
-                speed_y_base = 0.55 * self.direction
+                speed_y_base = CANRANGE["speed"] * self.direction_multiplier
 
-                self.error = self.raw_distance - 0.58
-                print(f"+++++ AUTON DR align -- {self.raw_distance:.2f} ERR: {self.error}")
+                self.error = d_avg - CANRANGE[self.direction]["target"]
+                print(f"+++++ AUTON DR align -- Dir: {self.direction}   ERR: {self.error:.2f}   "
+                      f"Bang: {self.error < CANRANGE[self.direction]["bang"]}   Raw:  {d_raw:.2f}   Avg: {d_avg:.2f}")
 
-                if (self.error < .15):
-                    print(f"+++++ AUTON DR bang bang")
-                    speed_y = self.outer_self._bang_bang_control(self.periodic_counter, self.error, speed_y_base)
-                else:
-                    speed_y = speed_y_base
+                if self.move is True:
+                    if self.error < CANRANGE[self.direction]["bang"]:
+                        # print(f"+++++ AUTON DR bang bang")
+                        speed_y = self.outer_self._bang_bang_control(self.periodic_counter, self.error, speed_y_base)
+                    else:
+                        speed_y = speed_y_base
 
-                self.outer_self._drive_robot(0, 0, speed_y)
+                    print(f"self.periodic_counter - {self.periodic_counter}")
+
+                    self.outer_self._drive_robot(0, 0, speed_y)
 
             def end(self, interrupted):
                 if interrupted:
@@ -324,21 +346,65 @@ class AutonDrive(SubsystemBase):
                 self.outer_self._drive_robot(0, 0, 0)
 
             def isFinished(self):
-                return self.error <= 0
+                if self.move is True:
+                    return self.error <= 0 or self.periodic_counter > CANRANGE[self.direction]["max_time"]
+                else:
+                    return False
+
+            def getAvgReading(self, new_range):
+                if "d_range" not in self.sensor: self.sensor["d_range"] = []
+                self.sensor["d_range"].append(new_range)
+                if len(self.sensor["d_range"]) > 3:
+                    self.sensor["d_range"].pop(0)
+                return sum(self.sensor["d_range"]) / len(self.sensor["d_range"])
 
         # Create and return the command
-        return AlignPipeCommand(self, direction)
+        return AlignPipeCommand(self, direction, move)
 
     def _bang_bang_control(self, periodic_counter, error, speed_y_base):
-        dead_zone = 0.02
 
-        if abs(error) < dead_zone:
-            return 0
+        if periodic_counter % 4 == 1:
+            return speed_y_base
         else:
-            if periodic_counter % 5 < 2:
-                return speed_y_base
-            else:
-                return 0
+            return 0
+
+    def back_and_rotate(self, rotation_speed:float) -> Command:
+        """
+        Creates a command that turns the robot until the simulated target distance is 1.0.
+        """
+
+        class BackAndRotateCommand(Command):
+            def __init__(self, outer_self, _rotation_speed):
+                super().__init__()
+                self.outer_self = outer_self
+                self.rotation_speed = _rotation_speed
+                self.periodic_counter = 0
+                self.speed_x = -1
+                self.speed_y = 0
+                self.rotation = _rotation_speed
+                # self.addRequirements(outer_self.drivetrain)
+
+            def initialize(self):
+                print(f"+++++ AUTON DR limelight I")
+
+            def execute(self):
+
+                self.periodic_counter += 1
+                self.outer_self._drive_robot(self.rotation, self.speed_x, self.speed_y)
+
+            def end(self, interrupted):
+                if interrupted:
+                    print(f"+++++ AUTON DR back_and_rotate Interrupted")
+                else:
+                    print(f"+++++ AUTON DR back_and_rotate End")
+
+                self.outer_self._drive_robot(0, 0, 0)
+
+            def isFinished(self):
+                return self.periodic_counter > 20
+
+        # Create and return the command
+        return BackAndRotateCommand(self, rotation_speed)
 
     def _drive_robot(self, rotation=0, x=0, y=0):
 
