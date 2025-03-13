@@ -54,15 +54,31 @@ INSTRUCTIONS_A = {
         "shot2": 8
     },
     "blue_center": {
+        "moves": "center",
         "shot1": 21
     },
     "red_center": {
+        "moves": "center",
         "shot1": 10
     }
 }
 
 INSTRUCTIONS_MOVES = {
+    "center": {
+        "move0": {
+            "speed_y": 0,
+            "speed_x": 2,
+            "rotation": 0,
+            "time": 25,
+        }
+    },
     "left": {
+        "move0": {
+            "speed_y": 0,
+            "speed_x": 2,
+            "rotation": 3,
+            "time": 25,
+        },
         "move1": {
             "speed_y": -3,
             "speed_x": 0,
@@ -77,6 +93,12 @@ INSTRUCTIONS_MOVES = {
         },
     },
     "right": {
+        "move0": {
+            "speed_y": 0,
+            "speed_x": 2,
+            "rotation": 3,
+            "time": 25,
+        },
         "move1": {
             "speed_y": 3,
             "speed_x": 0,
