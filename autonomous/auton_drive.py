@@ -313,7 +313,8 @@ class AutonDrive(SubsystemBase):
                 self.periodic_counter = 0
                 self.banging = False
 
-                direction_opp = ('right' if _direction == 'left' else 'left')
+                # direction_opp = ('right' if _direction == 'left' else 'left')
+                direction_opp = 'left'
                 self.direction = _direction
                 self.direction_multiplier = (1 if _direction == 'left' else -1)
                 self.move = _move

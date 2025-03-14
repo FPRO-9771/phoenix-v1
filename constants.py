@@ -13,7 +13,7 @@ CON_ELEV = {
     "min_max_tolerance": 0.3,
     "intake": 1.5,
     "level_2": 15,
-    "level_3": 55,
+    "level_3": 53,
     "level_4": 114,
     "target_position_tolerance": 0.3,
     "safety_retreat": 1,
@@ -31,7 +31,7 @@ CON_ARM = {
     "min_max_tolerance": 0,
     "hard_hold": 0,
     "move": 2.1,  # Safe position to move up and down
-    "intake": 4.9,  # Angle for intake of coral
+    "intake": 4.7,  # Angle for intake of coral
     "level_1": 9,  # Angle to deposit coral onto reef
     "level_1_flip": 9,
     "level_23": 8.8,  # Angle to deposit coral onto reef

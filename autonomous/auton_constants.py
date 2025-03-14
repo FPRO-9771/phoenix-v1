@@ -69,15 +69,15 @@ INSTRUCTIONS_MOVES = {
             "speed_y": 0,
             "speed_x": 2,
             "rotation": 0,
-            "time": 25,
+            "time": 20,
         }
     },
     "left": {
         "move0": {
             "speed_y": 0,
             "speed_x": 2,
-            "rotation": 3,
-            "time": 25,
+            "rotation": 1.5,
+            "time": 35,
         },
         "move1": {
             "speed_y": -3,
@@ -96,8 +96,8 @@ INSTRUCTIONS_MOVES = {
         "move0": {
             "speed_y": 0,
             "speed_x": 2,
-            "rotation": 3,
-            "time": 25,
+            "rotation": -1.5,
+            "time": 35,
         },
         "move1": {
             "speed_y": 3,
@@ -212,12 +212,12 @@ DRIVING = {
 CANRANGE = {
     "speed": 0.55,
     "right": {
-        "target": 0.45,
-        "bang": 0.35,
+        "target": 0.48,
+        "bang": 0.25,
         "max_time": 22
     },
     "left": {
-        "target": 0.49,
+        "target": 0.52,
         "bang": 0.25,
         "max_time": 22
     }
