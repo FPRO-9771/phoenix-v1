@@ -254,10 +254,11 @@ class RobotContainer:
         _RED_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.fromDegrees(180)
 
         alliance_color = DriverStation.getAlliance()
-        rotation = _BLUE_ALLIANCE_PERSPECTIVE_ROTATION
 
         if alliance_color == DriverStation.Alliance.kRed:
             rotation = _RED_ALLIANCE_PERSPECTIVE_ROTATION
+        else:
+            rotation = _BLUE_ALLIANCE_PERSPECTIVE_ROTATION
 
         state = self.drivetrain.get_state()
         current_heading = state.raw_heading
@@ -267,7 +268,11 @@ class RobotContainer:
             self.drivetrain.set_operator_perspective_forward(rotation)
         else:
             # print(f"toggle_robot_centric self.robot_centric ROBOT CENTRIC")
-            self.drivetrain.set_operator_perspective_forward(current_heading)
+            if alliance_color == DriverStation.Alliance.kBlue:
+                adjusted_heading = current_heading.rotateBy(Rotation2d.fromDegrees(180))
+                self.drivetrain.set_operator_perspective_forward(adjusted_heading)
+            else:
+                self.drivetrain.set_operator_perspective_forward(current_heading)
 
         self.robot_centric = not self.robot_centric  # Toggle the boolean value
 

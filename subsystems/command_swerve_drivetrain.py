@@ -286,11 +286,15 @@ class CommandSwerveDrivetrain(Subsystem, swerve.SwerveDrivetrain):
         if not self._has_applied_operator_perspective or DriverStation.isDisabled():
             alliance_color = DriverStation.getAlliance()
             if alliance_color is not None:
-                self.set_operator_perspective_forward(
-                    self._RED_ALLIANCE_PERSPECTIVE_ROTATION
-                    if alliance_color == DriverStation.Alliance.kRed
-                    else self._BLUE_ALLIANCE_PERSPECTIVE_ROTATION
-                )
+                if alliance_color == DriverStation.Alliance.kRed:
+                    self.reset_pose(Pose2d(7,5,self._BLUE_ALLIANCE_PERSPECTIVE_ROTATION))
+                    # self.reset_rotation(self._BLUE_ALLIANCE_PERSPECTIVE_ROTATION)
+                    self.set_operator_perspective_forward(self._RED_ALLIANCE_PERSPECTIVE_ROTATION)
+                else:
+                    self.reset_pose(Pose2d(7,5,self._RED_ALLIANCE_PERSPECTIVE_ROTATION))
+                    # self.reset_rotation(self._RED_ALLIANCE_PERSPECTIVE_ROTATION)
+                    self.set_operator_perspective_forward(self._BLUE_ALLIANCE_PERSPECTIVE_ROTATION)
+
                 self._has_applied_operator_perspective = True
 
     def _start_sim_thread(self):
