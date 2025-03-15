@@ -80,16 +80,16 @@ INSTRUCTIONS_MOVES = {
             "time": 35,
         },
         "move1": {
-            "speed_y": -3,
+            "speed_y": -2,
             "speed_x": 0,
             "rotation": 0,
-            "time": 25,
+            "time": 50,
         },
         "move2": {
-            "speed_x": 3,
+            "speed_x": 0,
             "speed_y": 0,
-            "rotation": -4,
-            "time": 30,
+            "rotation": -2.5,
+            "time": 65,
         },
     },
     "right": {
@@ -100,16 +100,16 @@ INSTRUCTIONS_MOVES = {
             "time": 35,
         },
         "move1": {
-            "speed_y": 3,
+            "speed_y": 2,
             "speed_x": 0,
             "rotation": 0,
-            "time": 25,
+            "time": 50,
         },
         "move2": {
-            "speed_x": -3,
+            "speed_x": 0,
             "speed_y": 0,
-            "rotation": 4,
-            "time": 30,
+            "rotation": 2.5,
+            "time": 65,
         },
     },
     "approach": {
@@ -117,14 +117,14 @@ INSTRUCTIONS_MOVES = {
             "speed_x": 2,
             "speed_y": 0,
             "rotation": 0,
-            "time": 40,
+            "time": 25,
             "sensor_stop_distance": None
         },
         "in3": {
             "speed_x": .8,
             "speed_y": 0,
             "rotation": 0,
-            "time": 60,
+            "time": 100,
             "sensor_stop_distance": None
         },
         "out1": {

@@ -192,10 +192,14 @@ class RobotContainer:
 
         # reset the field-centric heading on left bumper press
         ctrl.leftBumper().onTrue(
-            self.drivetrain.runOnce(lambda: self.toggle_robot_centric())
+            self.drivetrain.runOnce(lambda: self.toggle_robot_centric(True))
         )
 
         ctrl.back().onTrue(
+            self.drivetrain.runOnce(lambda: self.toggle_robot_centric(False))
+        )
+
+        ctrl.start().onTrue(
             self.drivetrain.runOnce(lambda: self.drivetrain.seed_field_centric())
         )
 
@@ -248,7 +252,9 @@ class RobotContainer:
             # InstantCommand(lambda: self.set_default_command(ctrl))
         )
 
-    def toggle_robot_centric(self):
+        ctrl.y().onTrue( self.auton_operator.shoot(4))
+
+    def toggle_robot_centric(self, activate_field_centric):
 
         _BLUE_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.fromDegrees(0)
         _RED_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.fromDegrees(180)
@@ -263,7 +269,7 @@ class RobotContainer:
         state = self.drivetrain.get_state()
         current_heading = state.raw_heading
 
-        if self.robot_centric:
+        if activate_field_centric:
             # print(f"toggle_robot_centric self.robot_centric ORIGINAL")
             self.drivetrain.set_operator_perspective_forward(rotation)
         else:
@@ -274,7 +280,8 @@ class RobotContainer:
             else:
                 self.drivetrain.set_operator_perspective_forward(current_heading)
 
-        self.robot_centric = not self.robot_centric  # Toggle the boolean value
+        self.robot_centric = not self.robot_centric
+        print(f" ---->>> self.robot_centric {self.robot_centric}")# Toggle the boolean value
 
     def configure_operator_controls(self):
         """Configure operator controller bindings (mechanisms)."""

@@ -126,12 +126,12 @@ class AutonModes(SubsystemBase):
                             appr_in_3["sensor_stop_distance"]
                         ),
                         auton_operator.intake_with_shooter(),
-                        leave_intake,
-                        auton_drive.drive_with_instructions(
-                            appr_out2["speed_x"], appr_out2["speed_y"], appr_out2["rotation"], appr_out2["time"],
-                            appr_out2["sensor_stop_distance"]
-                        ),
-                        auton_drive.limelight(const["shot2"]),
+                        # leave_intake,
+                        # auton_drive.drive_with_instructions(
+                        #     appr_out2["speed_x"], appr_out2["speed_y"], appr_out2["rotation"], appr_out2["time"],
+                        #     appr_out2["sensor_stop_distance"]
+                        # ),
+                        # auton_drive.limelight(const["shot2"]),
                         # get_ready_to_shoot,
                         # auton_operator.shoot(4, True, False),
                     ]

@@ -174,7 +174,7 @@ class Arm(SubsystemBase):
 
         return ArmLockCommand(self, lock)
 
-    def manual(self, percentage_func: Callable[[], float], max_rpm: float = 300) -> Command:
+    def manual(self, percentage_func: Callable[[], float], max_rpm: float = 450) -> Command:
 
         class ManualRunCommand(Command):
             def __init__(self, arm, percentage_func: Callable[[], float]):
@@ -216,12 +216,13 @@ class Arm(SubsystemBase):
                         self.arm.go_to_position(cp - sr).schedule()
 
             def isFinished(self):
-                towards_min = self.percentage_func() > 0
-                self.ss = self.arm.safety_stop(towards_min)
-
-                if self.ss is not None:
-                    print(f"///// ARM Man SS: {self.ss}")
-                    return True
+                return False
+                # towards_min = self.percentage_func() > 0
+                # self.ss = self.arm.safety_stop(towards_min)
+                #
+                # if self.ss is not None:
+                #     print(f"///// ARM Man SS: {self.ss}")
+                #     return True
 
         return ManualRunCommand(self, percentage_func)
 

@@ -130,7 +130,7 @@ class Elevator(SubsystemBase):
 
         return ElevatorMoveCommand(self, position)
 
-    def manual(self, percentage_func: Callable[[], float], max_rpm: float = 1000) -> Command:
+    def manual(self, percentage_func: Callable[[], float], max_rpm: float = 3000) -> Command:
 
         class ManualRunCommand(Command):
             def __init__(self, elevator, percentage_func: Callable[[], float]):
