@@ -13,10 +13,12 @@ from wpimath.geometry import Rotation2d
 
 from telemetry import Telemetry
 from generated.tuner_constants import TunerConstants
+from constants import SHOOTER_TYPE
 
 from subsystems.arm import Arm
 from subsystems.elevator import Elevator
 from subsystems.shooter import Shooter
+from subsystems.shooter_parade import ShooterParade
 from subsystems.climber import Climber
 
 from autonomous.auton_operator import AutonOperator
@@ -46,7 +48,13 @@ class RobotContainer:
         self.limelight_handler = LimelightHandler(debug=True)
         self.elevator = Elevator(1000)
         self.arm = Arm(300)
-        self.shooter = Shooter()
+        
+        # Conditionally initialize shooter based on SHOOTER_TYPE
+        if SHOOTER_TYPE == "Parade":
+            self.shooter = ShooterParade()
+        else:  # Competition
+            self.shooter = Shooter()
+        
         self.climber = Climber()
 
         self.auton_operator = AutonOperator()
@@ -205,13 +213,25 @@ class RobotContainer:
             self.arm.manual(lambda: ctrl.getHID().getRightY() * -1)
         )
 
-        Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
-            self.shooter.manual(lambda: ctrl.getHID().getLeftTriggerAxis())
-        )
+        # Shooter controls - different behavior based on SHOOTER_TYPE
+        if SHOOTER_TYPE == "Parade":
+            # Left trigger: pull back (while held)
+            Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
+                self.shooter.pull_back(lambda: ctrl.getHID().getLeftTriggerAxis() <= 0.05)
+            )
+            
+            # Right trigger: fire (single action)
+            Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).onTrue(
+                self.shooter.fire()
+            )
+        else:  # Competition
+            Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
+                self.shooter.manual(lambda: ctrl.getHID().getLeftTriggerAxis())
+            )
 
-        Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).whileTrue(
-            self.shooter.manual(lambda: ctrl.getHID().getRightTriggerAxis() * -1)
-        )
+            Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).whileTrue(
+                self.shooter.manual(lambda: ctrl.getHID().getRightTriggerAxis() * -1)
+            )
 
         ctrl.back().whileTrue(self.climber.manual(lambda: 0.25))
         ctrl.start().whileTrue(self.climber.manual(lambda: -0.25))
