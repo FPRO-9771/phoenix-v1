@@ -26,7 +26,7 @@ CON_ELEV = {
 }
 
 CON_ARM = {
-    "min": 2.1,
+    "min": -5,
     "max": 14,
     "min_max_tolerance": 0,
     "hard_hold": 0,

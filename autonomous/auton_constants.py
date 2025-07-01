@@ -89,7 +89,7 @@ INSTRUCTIONS_MOVES = {
             "speed_x": 0,
             "speed_y": 0,
             "rotation": -2.5,
-            "time": 65,
+            "time": 40,
         },
     },
     "right": {
@@ -109,7 +109,7 @@ INSTRUCTIONS_MOVES = {
             "speed_x": 0,
             "speed_y": 0,
             "rotation": 2.5,
-            "time": 65,
+            "time": 40,
         },
     },
     "approach": {

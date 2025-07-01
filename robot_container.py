@@ -252,8 +252,6 @@ class RobotContainer:
             # InstantCommand(lambda: self.set_default_command(ctrl))
         )
 
-        ctrl.y().onTrue( self.auton_operator.shoot(4))
-
     def toggle_robot_centric(self, activate_field_centric):
 
         _BLUE_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.fromDegrees(0)
