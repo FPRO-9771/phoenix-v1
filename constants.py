@@ -1,10 +1,15 @@
+# Shooter type selection - switch between "Competition" and "Parade"
+SHOOTER_TYPE = "Parade"  # Change to "Competition" to use original shooter
+
 # Dictionary mapping motor names to their IDs
 MOTOR_IDS = {
     "elevator_right": 20,
     "elevator_left": 21,
     "wrist": 22,
     "shooter": 25,
-    "climber": 26
+    "climber": 26,
+    "shooter_parade_left": 27,
+    "shooter_parade_right": 28
 }
 
 CON_ELEV = {
@@ -61,6 +66,12 @@ CON_SHOOT = {
     "shoot_duration_very_long": 5,
     "shoot_duration_long": 0.3,
     "shoot_duration": 0.3
+}
+
+CON_SHOOT_PARADE = {
+    "low_rpm": 500,      # Low RPM for pull-back (negative direction)
+    "max_rpm": 4000,     # Maximum RPM for firing
+    "fire_duration": 0.5 # Fire duration in seconds (adjustable)
 }
 
 CON_CLIMB = {
