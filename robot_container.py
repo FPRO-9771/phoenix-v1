@@ -1,7 +1,9 @@
+from difflib import restore
+
 from wpilib.event import EventLoop
 from wpilib import SmartDashboard, SendableChooser, DriverStation
 
-from commands2 import Command, InstantCommand, CommandScheduler
+from commands2 import Command, InstantCommand, CommandScheduler, SequentialCommandGroup
 from commands2.button import Trigger
 from commands2.button import CommandXboxController
 from commands2.sysid import SysIdRoutine
@@ -22,11 +24,12 @@ from subsystems.shooter_parade import ShooterParade
 from subsystems.climber import Climber
 
 from autonomous.auton_operator import AutonOperator
+from autonomous.auton_drive import AutonDrive
 
+from autonomous.auton_modes import AutonModes
 from autonomous.auton_mode_selector import create_auton_chooser
 
 from handlers.limelight_handler import LimelightHandler
-
 
 
 class RobotContainer:
@@ -46,8 +49,8 @@ class RobotContainer:
 
         # Initialize subsystems
         self.limelight_handler = LimelightHandler(debug=True)
-        self.elevator = Elevator(1000)
-        self.arm = Arm(300)
+        self.elevator = Elevator()
+        self.arm = Arm()
         
         # Conditionally initialize shooter based on SHOOTER_TYPE
         if SHOOTER_TYPE == "Parade":
@@ -57,19 +60,29 @@ class RobotContainer:
         
         self.climber = Climber()
 
-        self.auton_operator = AutonOperator()
-
         # Setting up bindings for necessary control of the swerve drive platform
         self._drive = (
             swerve.requests.FieldCentric()
             .with_deadband(self._max_speed * 0.1)
             .with_rotational_deadband(
                 self._max_angular_rate * 0.1
-            )  # Add a 10% deadband
+            )
             .with_drive_request_type(
                 swerve.SwerveModule.DriveRequestType.OPEN_LOOP_VOLTAGE
-            )  # Use open-loop control for drive motors
+            )
         )
+
+        self._drive_rc = (
+            swerve.requests.RobotCentric()
+            .with_deadband(self._max_speed * 0.1)
+            .with_rotational_deadband(
+                self._max_angular_rate * 0.1
+            )
+            .with_drive_request_type(
+                swerve.SwerveModule.DriveRequestType.OPEN_LOOP_VOLTAGE
+            )
+        )
+
         self._brake = swerve.requests.SwerveDriveBrake()
         self._point = swerve.requests.PointWheelsAt()
 
@@ -77,6 +90,23 @@ class RobotContainer:
 
         self.drivetrain = TunerConstants.create_drivetrain()
 
+        # Initiate command schedule functions for autonomous tasks
+        self.auton_operator = AutonOperator(self.elevator, self.arm, self.shooter, self.climber)
+        self.auton_drive = AutonDrive(self.drivetrain, self._drive_rc, self._max_speed, self._max_angular_rate,
+                                      self.limelight_handler)
+
+        self.robot_centric = False
+        self.default_command = None
+
+        self.auton_modes = AutonModes(self.auton_drive, self.auton_operator)
+
+        # Set up auton functions and dashboard selection
+        self.chooser = SendableChooser()
+        self.chooser = create_auton_chooser(self.auton_modes)
+
+        self.is_running = False
+
+    def setup_teleop(self):
         # Telemetry
         self.event_loop = EventLoop()
 
@@ -84,38 +114,19 @@ class RobotContainer:
         self.speed_ratio = 1
         self.rotation_ratio = 1
 
-        # If in simulation, seed_field_centric position
-        if utils.is_simulation():
-            self.drivetrain.seed_field_centric()
-
         # Register telemetry
         self.drivetrain.register_telemetry(self._logger.telemeterize)
 
         self.configure_bindings()
-
-        # Auton functions
-        self.chooser = SendableChooser()
-
-        # Autonomous command chooser
-        self.chooser = create_auton_chooser(self.drivetrain, self._drive, self.auton_operator)
 
     def configure_bindings(self):
         """Configure button-to-command mappings."""
         self.configure_driver_controls()
         self.configure_operator_controls()
 
-        #ToDo: This is just for testing on sim, delete later
-        # shooter_command = self.shooter.shoot(3, 'hold')
-        # CommandScheduler.getInstance().schedule(shooter_command)
+    def set_default_command(self, ctrl):
 
-
-    # def get_speed_multiplier(self):
-    #     "returns the current speed multiplier"
-
-    def configure_driver_controls(self):
-        """Configure driver controller bindings (driving and vision)."""
-
-        ctrl = self.controller_driver
+        CommandScheduler.getInstance().cancelAll()
 
         # Drivetrain default command
         self.drivetrain.setDefaultCommand(
@@ -134,6 +145,34 @@ class RobotContainer:
                 )
             )
         )
+
+        print("------------ Default command has been set")
+
+    def configure_driver_controls(self):
+        """Configure driver controller bindings (driving and vision)."""
+
+        ctrl = self.controller_driver
+
+        self.set_default_command(ctrl)
+        # # Drivetrain default command
+        # self.drivetrain.setDefaultCommand(
+        #     # Drivetrain will execute this command periodically
+        #     self.drivetrain.apply_request(
+        #         lambda: (
+        #             self._drive.with_velocity_x(
+        #                 -ctrl.getLeftY() * self._max_speed * self.speed_ratio
+        #             )  # Drive forward with negative Y (forward)
+        #             .with_velocity_y(
+        #                 -ctrl.getLeftX() * self._max_speed * self.speed_ratio
+        #             )  # Drive left with negative X (left)
+        #             .with_rotational_rate(
+        #                 -ctrl.getRightX() * self._max_angular_rate * self.rotation_ratio
+        #             )  # Drive counterclockwise with negative X (left)
+        #         )
+        #     )
+        # )
+
+        self.default_command = self.drivetrain.getDefaultCommand()
 
         ctrl.a().whileTrue(self.drivetrain.apply_request(lambda: self._brake))
         ctrl.b().whileTrue(
@@ -161,6 +200,14 @@ class RobotContainer:
 
         # reset the field-centric heading on left bumper press
         ctrl.leftBumper().onTrue(
+            self.drivetrain.runOnce(lambda: self.toggle_robot_centric(True))
+        )
+
+        ctrl.back().onTrue(
+            self.drivetrain.runOnce(lambda: self.toggle_robot_centric(False))
+        )
+
+        ctrl.start().onTrue(
             self.drivetrain.runOnce(lambda: self.drivetrain.seed_field_centric())
         )
 
@@ -176,33 +223,119 @@ class RobotContainer:
             InstantCommand(lambda: self.set_speed_ratio(1))
         )
 
-        # trying to do some autonomy
-        # ctrl.y().onTrue(
-        #     # self.drivetrain.apply_request(
-        #     #     lambda: self._drive.with_velocity_y(-3)  # Adjust speed if needed
-        #     # )
-        #     self.auton.drive(self.drivetrain, self._drive, self._max_angular_rate)
+        # restore_default = InstantCommand(
+        #     lambda: CommandScheduler.getInstance().setDefaultCommand(
+        #         self.drivetrain, self.default_command
+        #     )
         # )
         #
-        # ctrl.y().onFalse(
-        #     self.drivetrain.apply_request(lambda: self._drive.with_rotational_rate(0))
-        # )
+
+
+        def auto_seek_and_shoot(direction: str):
+            self.is_running = True
+            return self.auton_modes.seek_and_shoot(None, direction)
+
+        def auto_seek_and_shoot_end(ctrl):
+            print(f"----------------!!!!!!!!!!!!! self.is_running {self.is_running}")
+            self.is_running = False
+            return InstantCommand(lambda: self.set_default_command(ctrl))
+
+        Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
+            auto_seek_and_shoot('left')
+            # self.auton_modes.seek_and_shoot(None, 'left')
+        )
+
+        Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).onFalse(
+            auto_seek_and_shoot_end(ctrl)
+            # InstantCommand(lambda: self.set_default_command(ctrl))
+        )
+
+        Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).whileTrue(
+            auto_seek_and_shoot('right')
+            # self.auton_modes.seek_and_shoot(None, 'left')
+        )
+
+        Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).onFalse(
+            auto_seek_and_shoot_end(ctrl)
+            # InstantCommand(lambda: self.set_default_command(ctrl))
+        )
+
+    def toggle_robot_centric(self, activate_field_centric):
+
+        _BLUE_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.fromDegrees(0)
+        _RED_ALLIANCE_PERSPECTIVE_ROTATION = Rotation2d.fromDegrees(180)
+
+        alliance_color = DriverStation.getAlliance()
+
+        if alliance_color == DriverStation.Alliance.kRed:
+            rotation = _RED_ALLIANCE_PERSPECTIVE_ROTATION
+        else:
+            rotation = _BLUE_ALLIANCE_PERSPECTIVE_ROTATION
+
+        state = self.drivetrain.get_state()
+        current_heading = state.raw_heading
+
+        if activate_field_centric:
+            # print(f"toggle_robot_centric self.robot_centric ORIGINAL")
+            self.drivetrain.set_operator_perspective_forward(rotation)
+        else:
+            # print(f"toggle_robot_centric self.robot_centric ROBOT CENTRIC")
+            if alliance_color == DriverStation.Alliance.kBlue:
+                adjusted_heading = current_heading.rotateBy(Rotation2d.fromDegrees(180))
+                self.drivetrain.set_operator_perspective_forward(adjusted_heading)
+            else:
+                self.drivetrain.set_operator_perspective_forward(current_heading)
+
+        self.robot_centric = not self.robot_centric
+        print(f" ---->>> self.robot_centric {self.robot_centric}")# Toggle the boolean value
 
     def configure_operator_controls(self):
         """Configure operator controller bindings (mechanisms)."""
 
         ctrl = self.controller_operator
 
+        def cancel_subsystem_commands():
+            if self.elevator.getCurrentCommand():
+                self.elevator.getCurrentCommand().cancel()
+            if self.arm.getCurrentCommand():
+                self.arm.getCurrentCommand().cancel()
+            if self.shooter.getCurrentCommand():
+                self.shooter.getCurrentCommand().cancel()
+
+        def safe_operator(action: str, level: int):
+            print(f"----------------!!!!!!!!!!!!! self.is_running {self.is_running}")
+            if self.is_running is False:
+                if action == 'shoot':
+                    return self.auton_operator.shoot(level)
+                if action == 'intake':
+                    return self.auton_operator.intake()
+
         ctrl.rightBumper().onTrue(InstantCommand(lambda: CommandScheduler.getInstance().cancelAll()))
 
-        # Automated controls
-        ctrl.a().onTrue(self.auton_operator.shoot(2))
-        ctrl.x().onTrue(self.auton_operator.shoot(3))
-        ctrl.y().onTrue(self.auton_operator.shoot(4))
-        ctrl.b().onTrue(self.auton_operator.intake())
+        ctrl.leftBumper().onTrue(self.auton_operator.hard_hold())
 
-        ctrl.back().whileTrue(self.climber.manual(lambda: 0.2))
-        ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
+        # Automated controls
+        ctrl.a().onTrue(safe_operator('shoot', 2))
+        ctrl.x().onTrue(safe_operator('shoot', 3))
+        ctrl.y().onTrue(safe_operator('shoot', 4))
+        ctrl.b().onTrue(safe_operator('intake', 0))
+
+        # # Automated controls with pre-cancellation
+        # ctrl.a().onTrue(SequentialCommandGroup(
+        #     InstantCommand(cancel_subsystem_commands),
+        #     self.auton_operator.shoot(2)))
+        # ctrl.x().onTrue(SequentialCommandGroup(
+        #     InstantCommand(cancel_subsystem_commands),
+        #     self.auton_operator.shoot(3)))
+        # ctrl.y().onTrue(SequentialCommandGroup(
+        #     InstantCommand(cancel_subsystem_commands),
+        #     self.auton_operator.shoot(4)))
+        # ctrl.b().onTrue(SequentialCommandGroup(
+        #     InstantCommand(cancel_subsystem_commands),
+        #     self.auton_operator.intake()))
+
+        # ctrl.back().whileTrue(self.climber.manual(lambda: 0.2))
+        # ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
 
         # Manual controls with buttons
         Trigger(lambda: abs(ctrl.getHID().getLeftY()) > 0.1).whileTrue(
@@ -247,9 +380,3 @@ class RobotContainer:
     def get_autonomous_command(self):
         selected_command = self.chooser.getSelected()
         return selected_command
-
-    #
-    # def rotate_drivetrain(self):
-    #     """Helper method to rotate the drivetrain."""
-    #     rotation_request = self.drive.with_rotational_rate(.5 * self.max_angular_rate)
-    #     self.drivetrain.apply_request(rotation_request)
