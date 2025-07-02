@@ -69,9 +69,11 @@ CON_SHOOT = {
 }
 
 CON_SHOOT_PARADE = {
-    "low_rpm": 500,      # Low RPM for pull-back (negative direction)
-    "max_rpm": 4000,     # Maximum RPM for firing
-    "fire_duration": 0.5 # Fire duration in seconds (adjustable)
+    "low_rpm": 500,        # Low RPM for pull-back (negative direction) - UNUSED
+    "max_rpm": 4000,       # Maximum RPM for firing - UNUSED
+    "pullback_voltage": 3.0, # Low voltage for slow pull-back (direct voltage control)
+    "fire_voltage": 12.0,  # Maximum voltage for fast firing (direct voltage control)
+    "fire_duration": 0.5   # Fire duration in seconds (adjustable)
 }
 
 CON_CLIMB = {
@@ -79,4 +81,33 @@ CON_CLIMB = {
     "min_max_tolerance": 1,
     "safety_retreat": 1,
     "power_ratio": 1
+}
+
+# Robot container configuration
+CON_ROBOT = {
+    # Speed and rotation settings
+    "max_angular_rate_rotations": 0.75,  # 3/4 rotation per second max angular velocity
+    "deadband_percent": 0.1,              # 10% deadband for drive and rotation
+    "slow_mode_ratio": 0.1,               # Speed when in slow mode
+    "rotation_multiplier": 1.5,           # Rotation ratio multiplier
+    
+    # Initial speed ratios by mode
+    "parade_initial_speed": 0.3,          # Start slow for parades
+    "competition_initial_speed": 1.0,     # Start full speed for competition
+    
+    # Controller ports
+    "driver_controller_port": 0,
+    "operator_controller_port": 1,
+    
+    # Subsystem initialization values
+    "elevator_max_height": 1000,
+    "arm_max_angle": 300,
+    
+    # Control thresholds
+    "joystick_deadband": 0.1,            # Ignore joystick inputs below this
+    "trigger_threshold": 0.05,           # Trigger activation threshold
+    
+    # Manual control speeds
+    "climber_manual_up": 0.25,
+    "climber_manual_down": -0.25
 }

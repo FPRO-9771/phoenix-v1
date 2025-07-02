@@ -15,7 +15,7 @@ from wpimath.geometry import Rotation2d
 
 from telemetry import Telemetry
 from generated.tuner_constants import TunerConstants
-from constants import SHOOTER_TYPE
+from constants import SHOOTER_TYPE, CON_ROBOT
 
 from subsystems.arm import Arm
 from subsystems.elevator import Elevator
@@ -40,33 +40,35 @@ class RobotContainer:
             TunerConstants.speed_at_12_volts
         )  # speed_at_12_volts desired top speed
         self._max_angular_rate = rotationsToRadians(
-            0.75
-        )  # 3/4 of a rotation per second max angular velocity
+            CON_ROBOT["max_angular_rate_rotations"]
+        )  # Max angular velocity from constants
 
         # Initialize two controllers
-        self.controller_driver = CommandXboxController(0)  # Driver controller for driving/vision
-        self.controller_operator = CommandXboxController(1)  # Operator controller for mechanisms
+        self.controller_driver = CommandXboxController(CON_ROBOT["driver_controller_port"])
+        self.controller_operator = CommandXboxController(CON_ROBOT["operator_controller_port"])
 
         # Initialize subsystems
         self.limelight_handler = LimelightHandler(debug=True)
-        self.elevator = Elevator()
-        self.arm = Arm()
+        self.elevator = Elevator(CON_ROBOT["elevator_max_height"])
+        self.arm = Arm(CON_ROBOT["arm_max_angle"])
         
         # Conditionally initialize shooter based on SHOOTER_TYPE
         if SHOOTER_TYPE == "Parade":
             self.shooter = ShooterParade()
+            self.initial_speed_ratio = CON_ROBOT["parade_initial_speed"]
         else:  # Competition
             self.shooter = Shooter()
+            self.initial_speed_ratio = CON_ROBOT["competition_initial_speed"]
         
         self.climber = Climber()
 
         # Setting up bindings for necessary control of the swerve drive platform
         self._drive = (
             swerve.requests.FieldCentric()
-            .with_deadband(self._max_speed * 0.1)
+            .with_deadband(self._max_speed * CON_ROBOT["deadband_percent"])
             .with_rotational_deadband(
-                self._max_angular_rate * 0.1
-            )
+                self._max_angular_rate * CON_ROBOT["deadband_percent"]
+            )  # Deadband from constants
             .with_drive_request_type(
                 swerve.SwerveModule.DriveRequestType.OPEN_LOOP_VOLTAGE
             )
@@ -110,9 +112,8 @@ class RobotContainer:
         # Telemetry
         self.event_loop = EventLoop()
 
-        # Speed ratio for drivetrain
-        self.speed_ratio = 1
-        self.rotation_ratio = 1
+        # Initialize speed ratios using the centralized function
+        self.set_speed_ratio(self.initial_speed_ratio)  # Start at full speed (or forced slow if Parade mode)
 
         # Register telemetry
         self.drivetrain.register_telemetry(self._logger.telemeterize)
@@ -217,10 +218,10 @@ class RobotContainer:
 
         # slow mode with buttons
         ctrl.rightBumper().onTrue(
-            InstantCommand(lambda: self.set_speed_ratio(0.1))
+            InstantCommand(lambda: self.set_speed_ratio(CON_ROBOT["slow_mode_ratio"]))
         )
         ctrl.rightBumper().onFalse(
-            InstantCommand(lambda: self.set_speed_ratio(1))
+            InstantCommand(lambda: self.set_speed_ratio(CON_ROBOT["competition_initial_speed"]))
         )
 
         # restore_default = InstantCommand(
@@ -338,36 +339,36 @@ class RobotContainer:
         # ctrl.start().whileTrue(self.climber.manual(lambda: -0.2))
 
         # Manual controls with buttons
-        Trigger(lambda: abs(ctrl.getHID().getLeftY()) > 0.1).whileTrue(
+        Trigger(lambda: abs(ctrl.getHID().getLeftY()) > CON_ROBOT["joystick_deadband"]).whileTrue(
             self.elevator.manual(lambda: ctrl.getHID().getLeftY())
         )
 
-        Trigger(lambda: abs(ctrl.getHID().getRightY()) > 0.1).whileTrue(
+        Trigger(lambda: abs(ctrl.getHID().getRightY()) > CON_ROBOT["joystick_deadband"]).whileTrue(
             self.arm.manual(lambda: ctrl.getHID().getRightY() * -1)
         )
 
         # Shooter controls - different behavior based on SHOOTER_TYPE
         if SHOOTER_TYPE == "Parade":
             # Left trigger: pull back (while held)
-            Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
-                self.shooter.pull_back(lambda: ctrl.getHID().getLeftTriggerAxis() <= 0.05)
+            Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > CON_ROBOT["trigger_threshold"]).whileTrue(
+                self.shooter.pull_back(lambda: ctrl.getHID().getLeftTriggerAxis() <= CON_ROBOT["trigger_threshold"])
             )
             
             # Right trigger: fire (single action)
-            Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).onTrue(
+            Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > CON_ROBOT["trigger_threshold"]).onTrue(
                 self.shooter.fire()
             )
         else:  # Competition
-            Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > 0.05).whileTrue(
+            Trigger(lambda: ctrl.getHID().getLeftTriggerAxis() > CON_ROBOT["trigger_threshold"]).whileTrue(
                 self.shooter.manual(lambda: ctrl.getHID().getLeftTriggerAxis())
             )
 
-            Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > 0.05).whileTrue(
+            Trigger(lambda: ctrl.getHID().getRightTriggerAxis() > CON_ROBOT["trigger_threshold"]).whileTrue(
                 self.shooter.manual(lambda: ctrl.getHID().getRightTriggerAxis() * -1)
             )
 
-        ctrl.back().whileTrue(self.climber.manual(lambda: 0.25))
-        ctrl.start().whileTrue(self.climber.manual(lambda: -0.25))
+        ctrl.back().whileTrue(self.climber.manual(lambda: CON_ROBOT["climber_manual_up"]))
+        ctrl.start().whileTrue(self.climber.manual(lambda: CON_ROBOT["climber_manual_down"]))
 
         # Default commands
         # self.arm.setDefaultCommand(self.arm.hold_position())
@@ -375,7 +376,7 @@ class RobotContainer:
     def set_speed_ratio(self, ratio):
         """Sets the speed ratio based on button press/release."""
         self.speed_ratio = ratio
-        self.rotation_ratio = min(1, ratio * 1.5)
+        self.rotation_ratio = min(1, ratio * CON_ROBOT["rotation_multiplier"])
 
     def get_autonomous_command(self):
         selected_command = self.chooser.getSelected()

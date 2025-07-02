@@ -29,11 +29,11 @@ class ShooterParade(SubsystemBase):
         """Configure both motors with appropriate settings."""
         config = TalonFXConfiguration()
 
-        # Velocity control configuration
+        # Velocity control configuration - tuned for Kraken motors
         slot0 = Slot0Configs()
-        slot0.k_p = 0.1    # Velocity control gains
+        slot0.k_p = 0.25   # Higher P gain for faster response
         slot0.k_i = 0.0
-        slot0.k_d = 0.0
+        slot0.k_d = 0.01   # Small D gain for stability  
         slot0.k_v = 0.12   # Feed forward gain
         config.slot0 = slot0
 
@@ -59,25 +59,26 @@ class ShooterParade(SubsystemBase):
                 self.addRequirements(shooter)
 
             def initialize(self):
-                print("///// PARADE SHOOTER PULL BACK START")
+                print(">>>>> PULL-BACK STARTING - NEW VOLTAGE VERSION! <<<<<")
 
             def execute(self):
-                # Convert RPM to RPS and make negative for pull-back
-                target_rps = -CON_SHOOT_PARADE["low_rpm"] / 60.0
+                # Use low voltage for slow pull-back speed
+                pullback_voltage = -CON_SHOOT_PARADE["pullback_voltage"]  # Negative for reverse
+                print(f"   Pull-back voltage: {pullback_voltage}V (SLOW SPEED)")
                 
-                # Set both motors to same velocity (inversion handled in config)
-                self.shooter.velocity_request_left.velocity = target_rps
-                self.shooter.velocity_request_right.velocity = target_rps
-                
-                self.shooter.motor_left.set_control(self.shooter.velocity_request_left)
-                self.shooter.motor_right.set_control(self.shooter.velocity_request_right)
+                # Apply low voltage directly to both motors (negative for pull-back)
+                self.shooter.motor_left.setVoltage(pullback_voltage)
+                self.shooter.motor_right.setVoltage(pullback_voltage)
                 self.shooter.is_running = True
 
             def isFinished(self):
                 return self.stop_condition and self.stop_condition()
 
             def end(self, interrupted):
-                self.shooter.stop()
+                # Stop motors with voltage control
+                self.shooter.motor_left.setVoltage(0.0)
+                self.shooter.motor_right.setVoltage(0.0)
+                self.shooter.is_running = False
                 print("///// PARADE SHOOTER PULL BACK END")
 
         return PullBackCommand(self, stop_condition)
@@ -93,20 +94,18 @@ class ShooterParade(SubsystemBase):
                 self.timer = Timer()
 
             def initialize(self):
-                print("///// PARADE SHOOTER FIRE START")
+                print(">>>>> FIRE STARTING - NEW VERSION WITH 12V! <<<<<")
                 self.timer.reset()
                 self.timer.start()
 
             def execute(self):
-                # Convert RPM to RPS for firing
-                target_rps = CON_SHOOT_PARADE["max_rpm"] / 60.0
+                # Use maximum voltage for blazing fast fire speed
+                fire_voltage = CON_SHOOT_PARADE["fire_voltage"]
+                print(f"   Fire voltage: {fire_voltage}V (MAXIMUM SPEED)")
                 
-                # Set both motors to same velocity (inversion handled in config)
-                self.shooter.velocity_request_left.velocity = target_rps
-                self.shooter.velocity_request_right.velocity = target_rps
-                
-                self.shooter.motor_left.set_control(self.shooter.velocity_request_left)
-                self.shooter.motor_right.set_control(self.shooter.velocity_request_right)
+                # Apply maximum voltage directly to both motors
+                self.shooter.motor_left.setVoltage(fire_voltage)
+                self.shooter.motor_right.setVoltage(fire_voltage)
                 self.shooter.is_running = True
 
             def isFinished(self):
@@ -114,7 +113,10 @@ class ShooterParade(SubsystemBase):
                 return time_elapsed >= CON_SHOOT_PARADE["fire_duration"]
 
             def end(self, interrupted):
-                self.shooter.stop()
+                # Stop motors with voltage control
+                self.shooter.motor_left.setVoltage(0.0)
+                self.shooter.motor_right.setVoltage(0.0)
+                self.shooter.is_running = False
                 self.timer.stop()
                 print(f"///// PARADE SHOOTER FIRE END (duration: {self.timer.get():.2f}s)")
 
@@ -122,8 +124,8 @@ class ShooterParade(SubsystemBase):
 
     def stop(self):
         """Stop both motors."""
-        self.motor_left.set_control(DutyCycleOut(0))
-        self.motor_right.set_control(DutyCycleOut(0))
+        self.motor_left.setVoltage(0.0)
+        self.motor_right.setVoltage(0.0)
         self.is_running = False
 
     def periodic(self):
