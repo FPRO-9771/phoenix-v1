@@ -38,3 +38,12 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Robot simulation generated files
+simgui.json
+simgui-ds.json
+simgui-window.json
+networktables.json
+logs/
+*.prof
+profiling_log.txt
