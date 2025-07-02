@@ -71,7 +71,7 @@ CON_SHOOT = {
 CON_SHOOT_PARADE = {
     "low_rpm": 500,        # Low RPM for pull-back (negative direction) - UNUSED
     "max_rpm": 4000,       # Maximum RPM for firing - UNUSED
-    "pullback_voltage": 3.0, # Low voltage for slow pull-back (direct voltage control)
+    "pullback_voltage": 0.7, # Low voltage for slow pull-back (direct voltage control)
     "fire_voltage": 12.0,  # Maximum voltage for fast firing (direct voltage control)
     "fire_duration": 0.5   # Fire duration in seconds (adjustable)
 }

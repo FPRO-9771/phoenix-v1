@@ -11,7 +11,7 @@ from constants import MOTOR_IDS, CON_ELEV, CON_ARM
 
 class Elevator(SubsystemBase):
 
-    def __init__(self):
+    def __init__(self, max_height=None):
         super().__init__()
 
         # Initialize motor

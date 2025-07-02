@@ -9,9 +9,10 @@ from wpilib import Timer
 
 class ShooterParade(SubsystemBase):
 
-    def __init__(self):
+    def __init__(self, max_rpm: float = 2000):
         """Initialize the parade shooter subsystem with two Kraken X44 motors."""
         super().__init__()
+        self.max_rpm = max_rpm
         
         # Initialize motors
         self.motor_left = TalonFX(MOTOR_IDS["shooter_parade_left"])
@@ -131,3 +132,37 @@ class ShooterParade(SubsystemBase):
     def periodic(self):
         """Periodic update function."""
         pass
+
+    # Compatibility methods to match Shooter interface
+    def shoot(self, strength: int, action='shoot', stop_condition: Callable[[], bool] = None, duration="shoot_duration") -> Command:
+        """Compatibility method to match original Shooter interface."""
+        if action == 'hold':
+            # For 'hold' action, use pull_back method
+            return self.pull_back(stop_condition)
+        else:
+            # For 'shoot' action, use fire method
+            return self.fire()
+
+    def manual(self, percentage_func: Callable[[], float]) -> Command:
+        """Compatibility method for manual control - currently not implemented for parade shooter."""
+        
+        class ManualRunCommand(Command):
+            def __init__(self, shooter, percentage_func: Callable[[], float]):
+                super().__init__()
+                self.shooter = shooter
+                self.percentage_func = percentage_func
+                self.addRequirements(shooter)
+
+            def execute(self):
+                # For now, just stop the shooter during manual control
+                percentage = self.percentage_func()
+                if abs(percentage) <= 0.1:
+                    self.shooter.stop()
+
+            def end(self, interrupted):
+                self.shooter.stop()
+
+            def isFinished(self):
+                return False
+
+        return ManualRunCommand(self, percentage_func)

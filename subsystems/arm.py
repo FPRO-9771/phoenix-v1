@@ -12,7 +12,7 @@ from constants import MOTOR_IDS, CON_ARM
 
 class Arm(SubsystemBase):
 
-    def __init__(self):
+    def __init__(self, max_angle=None):
         """Initialize the arm subsystem."""
         super().__init__()
 
