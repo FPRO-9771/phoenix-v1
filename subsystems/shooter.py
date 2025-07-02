@@ -84,7 +84,7 @@ class Shooter(SubsystemBase):
                     print(f"///// SHOOTER {self.action.upper()} STOPPING")
                     return True
 
-                if self.action == "shoot":
+                if self.action == "shoot" or self.action == "hold" and not self.stop_condition:
                     time_elapsed = self.timer.get()
                     print(f"///// SHOOTER {self.action.upper()} TIMER: {time_elapsed:.2f}s")
                     if time_elapsed >= self.duration_time:  # ✅ 'shoot' runs for 0.25 seconds
@@ -94,8 +94,10 @@ class Shooter(SubsystemBase):
                 return False
 
             def end(self, interrupted):
-                    self.shooter.motor.setVoltage(0)
-                    self.timer.stop()
+                if interrupted:
+                    print(f"///// SHOOTER {self.action.upper()} --CANCEL--")
+                self.shooter.motor.setVoltage(0)
+                self.timer.stop()
 
         return ShooterShootCommand(self, strength, action, stop_condition, duration)
 

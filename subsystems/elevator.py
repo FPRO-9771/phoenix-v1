@@ -2,14 +2,16 @@ from commands2 import SubsystemBase, Command
 from phoenix6.hardware import TalonFX
 from phoenix6.configs import TalonFXConfiguration, Slot0Configs
 from phoenix6.signals import NeutralModeValue
-from phoenix6.controls import VelocityVoltage, Follower
+from phoenix6.controls import VelocityVoltage, Follower, VoltageOut
 from typing import Callable
 from constants import MOTOR_IDS, CON_ELEV, CON_ARM
 
+# for testing
+# from wpilib import Timer
 
 class Elevator(SubsystemBase):
 
-    def __init__(self, max_rpm: float = 2000):
+    def __init__(self):
         super().__init__()
 
         # Initialize motor
@@ -30,21 +32,30 @@ class Elevator(SubsystemBase):
         slot0.k_v = 0.12  # Feedforward gain
         motor_configs.slot0 = slot0
 
+        self.voltage_request = VoltageOut(0)
+
         # Set motor to brake mode when stopped
         motor_configs.motor_output.neutral_mode = NeutralModeValue.BRAKE
 
         # Apply motor configurations
         self.motor.configurator.apply(motor_configs)
 
-        self.max_rpm = max_rpm
         self.velocity_request = VelocityVoltage(0)
         self.is_running = False
 
         # Current target angle and state tracking
         self.is_holding_position = False
 
+        # for testing
+        # self.sim_timer = Timer()
+
     def get_current_position(self) -> float:
         motor_position = self.motor.get_position().value * -1
+
+        # # for testing
+        # elapsed_time = self.sim_timer.get()
+        # motor_position = elapsed_time * 30
+
         print(f"///// ELEV CP: {motor_position}")
         return motor_position
 
@@ -74,40 +85,59 @@ class Elevator(SubsystemBase):
                 self.target_position = min(max(target_position, CON_ELEV["min"]), CON_ELEV["max"])
                 self.addRequirements(elevator)
 
+                # for testing
+                # self.elevator.sim_timer.start()
+
             def initialize(self):
                 print(f"///// ELEV GTP T: {self.target_position}")
                 self.elevator.target_position = self.target_position
 
             def execute(self):
-                cp = self.elevator.get_current_position()
-                error = self.target_position - cp
+                # use function to get accelerated and decelerated voltage
+                voltage = self.get_voltage() * -1
+                print(f"///// ELEV GTP V: {voltage}")
 
-                # Simple proportional control
-                kP = 1  # Adjust this gain
-                voltage = error * kP
+                self.elevator.voltage_request.output = voltage
 
-                # Limit voltage for safety
-                voltage = min(max(voltage, - CON_ELEV["voltage_limit"]), CON_ELEV["voltage_limit"]) * -1
-                # print(f"///// ELEV GTP V: {voltage}")
-
-                # Apply voltage to motor
-                self.elevator.motor.setVoltage(voltage)
+                # Apply using control request - this explicitly sets voltage control mode
+                self.elevator.motor.set_control(self.elevator.voltage_request)
 
             def isFinished(self):
                 return self.elevator.at_target_position(self.target_position)
 
             def end(self, interrupted):
+                if interrupted:
+                    print(f"///// ELEV GTP T: {self.target_position} --CANCEL--")
                 self.elevator.motor.setVoltage(0)
+
+                # for testing
+                # self.elevator.sim_timer.reset()
+
+            def get_voltage(self):
+                const = CON_ELEV["speed"]
+                cp = self.elevator.get_current_position()
+                tp = self.target_position
+                v_min = const["v_min"]
+                v_max = const["v_max"]
+                pa_ratio = const["cp_to_acceleration_ratio"]
+                dist_from_target = abs(tp - cp)
+                t_dir = 1
+                if cp > tp:
+                    t_dir = -1
+                a = max(v_min, cp * pa_ratio)
+                b = max(v_min, dist_from_target * pa_ratio)
+                return min(a, b, v_max) * const["v_calc_to_limit_ratio"] * t_dir
 
         return ElevatorMoveCommand(self, position)
 
-    def manual(self, percentage_func: Callable[[], float]) -> Command:
+    def manual(self, percentage_func: Callable[[], float], max_rpm: float = 3000) -> Command:
 
         class ManualRunCommand(Command):
             def __init__(self, elevator, percentage_func: Callable[[], float]):
                 super().__init__()
                 self.elevator = elevator
                 self.percentage_func = percentage_func  # Store function instead of static value
+                self.max_rpm = max_rpm
                 self.addRequirements(elevator)
                 self.ss = None
 
@@ -120,7 +150,7 @@ class Elevator(SubsystemBase):
                     self.elevator.stop()
                     return
                 #
-                target_rps = (percentage * self.elevator.max_rpm) / 60.0
+                target_rps = (percentage * self.max_rpm) / 60.0
                 # print(f"///// ELEV Man R: {target_rps}")
                 self.elevator.velocity_request.velocity = target_rps
                 self.elevator.motor.set_control(self.elevator.velocity_request)
@@ -162,6 +192,7 @@ class Elevator(SubsystemBase):
 
     def periodic(self):
         """Periodic update function for telemetry and monitoring."""
+        pass
         # current_height = self.get_current_height()
         #
         # # Only report if height has changed significantly
