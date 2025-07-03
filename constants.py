@@ -92,7 +92,7 @@ CON_ROBOT = {
     "rotation_multiplier": 1.5,           # Rotation ratio multiplier
     
     # Initial speed ratios by mode
-    "parade_initial_speed": 0.3,          # Start slow for parades
+    "parade_initial_speed": 0.2,          # Start slow for parades
     "competition_initial_speed": 1.0,     # Start full speed for competition
     
     # Controller ports

@@ -221,7 +221,7 @@ class RobotContainer:
             InstantCommand(lambda: self.set_speed_ratio(CON_ROBOT["slow_mode_ratio"]))
         )
         ctrl.rightBumper().onFalse(
-            InstantCommand(lambda: self.set_speed_ratio(CON_ROBOT["competition_initial_speed"]))
+            InstantCommand(lambda: self.set_speed_ratio(self.initial_speed_ratio))
         )
 
         # restore_default = InstantCommand(
