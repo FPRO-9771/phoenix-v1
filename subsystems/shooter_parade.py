@@ -85,24 +85,27 @@ class ShooterParade(SubsystemBase):
         return PullBackCommand(self, stop_condition)
 
     def fire(self) -> Command:
-        """Run motors at maximum RPM for set duration."""
+        """Run motors at maximum RPM for 4 rotations."""
         
         class FireCommand(Command):
             def __init__(self, shooter):
                 super().__init__()
                 self.shooter = shooter
                 self.addRequirements(shooter)
-                self.timer = Timer()
+                self.start_position_left = 0
+                self.start_position_right = 0
+                self.target_rotations = 4
 
             def initialize(self):
-                print(">>>>> FIRE STARTING - NEW VERSION WITH 12V! <<<<<")
-                self.timer.reset()
-                self.timer.start()
+                print(">>>>> FIRE STARTING - NEW VERSION WITH 12V FOR 4 ROTATIONS! <<<<<")
+                # Record starting positions
+                self.start_position_left = self.shooter.motor_left.get_position().value
+                self.start_position_right = self.shooter.motor_right.get_position().value
+                print(f"   Starting positions - Left: {self.start_position_left:.2f}, Right: {self.start_position_right:.2f}")
 
             def execute(self):
                 # Use maximum voltage for blazing fast fire speed
                 fire_voltage = CON_SHOOT_PARADE["fire_voltage"]
-                print(f"   Fire voltage: {fire_voltage}V (MAXIMUM SPEED)")
                 
                 # Apply maximum voltage directly to both motors
                 self.shooter.motor_left.setVoltage(fire_voltage)
@@ -110,16 +113,34 @@ class ShooterParade(SubsystemBase):
                 self.shooter.is_running = True
 
             def isFinished(self):
-                time_elapsed = self.timer.get()
-                return time_elapsed >= CON_SHOOT_PARADE["fire_duration"]
+                # Get current positions
+                current_left = self.shooter.motor_left.get_position().value
+                current_right = self.shooter.motor_right.get_position().value
+                
+                # Calculate rotations completed
+                rotations_left = abs(current_left - self.start_position_left)
+                rotations_right = abs(current_right - self.start_position_right)
+                
+                # Use the average of both motors to determine completion
+                avg_rotations = (rotations_left + rotations_right) / 2
+                
+                return avg_rotations >= self.target_rotations
 
             def end(self, interrupted):
                 # Stop motors with voltage control
                 self.shooter.motor_left.setVoltage(0.0)
                 self.shooter.motor_right.setVoltage(0.0)
                 self.shooter.is_running = False
-                self.timer.stop()
-                print(f"///// PARADE SHOOTER FIRE END (duration: {self.timer.get():.2f}s)")
+                
+                # Log final positions
+                final_left = self.shooter.motor_left.get_position().value
+                final_right = self.shooter.motor_right.get_position().value
+                rotations_left = abs(final_left - self.start_position_left)
+                rotations_right = abs(final_right - self.start_position_right)
+                avg_rotations = (rotations_left + rotations_right) / 2
+                
+                print(f"///// PARADE SHOOTER FIRE END - Completed {avg_rotations:.2f} rotations")
+                print(f"   Left motor: {rotations_left:.2f} rotations, Right motor: {rotations_right:.2f} rotations")
 
         return FireCommand(self)
 
